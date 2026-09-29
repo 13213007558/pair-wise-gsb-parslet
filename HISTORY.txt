@@ -4,6 +4,12 @@
   We're in maintenance mode! The community is really stepping up here though, sending
   interesting additions our way. Here's what has been merged this far: 
 
+  + Opt-in left recursion support: pass `left_recursion: true` to #parse to
+    enable direct and indirect left-recursive rules (grown iteratively from
+    a seed parse, ordered choice semantics preserved). Nullable cycles that
+    can never consume input are diagnosed with Parslet::InfiniteLoopError
+    instead of hanging.
+
   + Specification for mixing parslet parsers (Artur Komarov).
 
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).

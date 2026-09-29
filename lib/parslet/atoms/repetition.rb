@@ -36,6 +36,7 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     
     break_on = nil
     loop do
+      iter_pos = source.bytepos
       success, value = parslet.apply(source, context, false)
 
       break_on = value
@@ -46,6 +47,16 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
       
       # If we're not greedy (max is defined), check if that has been reached. 
       return succ(accum) if max && occ>=max
+
+      # A successful match that consumed no input would make an unbounded
+      # repetition spin forever (nullable repetition, possibly through a
+      # left-recursive cycle). Diagnose the cycle instead of hanging.
+      if max.nil? && source.bytepos == iter_pos
+        raise Parslet::InfiniteLoopError,
+          "Repetition of #{parslet.inspect} matched without consuming " \
+          "input; the grammar contains a nullable cycle that cannot " \
+          "make progress."
+      end
     end
     
     # Last attempt to match parslet was a failure, failure reason in break_on.
@@ -84,4 +95,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-

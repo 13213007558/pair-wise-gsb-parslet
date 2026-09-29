@@ -20,6 +20,10 @@ class Parslet::Atoms::Base
   #   defaults to Parslet::ErrorReporter::Tree 
   # @option options [Boolean] :prefix Should a prefix match be accepted? 
   #   (default: false)
+  # @option options [Boolean] :left_recursion Enable support for direct and
+  #   indirect left-recursive rules (default: false). When enabled, rules
+  #   like 'rule(:expr) { expr >> str(...) >> term | term }' work out of the
+  #   box; ordered choice semantics are preserved.
   # @return [Hash, Array, Parslet::Slice] PORO (Plain old Ruby object) result
   #   tree
   #
@@ -30,7 +34,8 @@ class Parslet::Atoms::Base
 
     # Try to cheat. Assuming that we'll be able to parse the input, don't 
     # run error reporting code. 
-    success, value = setup_and_apply(source, nil, !options[:prefix])
+    success, value = setup_and_apply(
+      source, nil, !options[:prefix], options[:left_recursion])
     
     # If we didn't succeed the parse, raise an exception for the user. 
     # Stack trace will be off, but the error tree should explain the reason
@@ -40,7 +45,8 @@ class Parslet::Atoms::Base
       # gathering error information in the process.
       reporter = options[:reporter] || Parslet::ErrorReporter::Tree.new
       source.bytepos = 0
-      success, value = setup_and_apply(source, reporter, !options[:prefix])
+      success, value = setup_and_apply(
+        source, reporter, !options[:prefix], options[:left_recursion])
       
       fail "Assertion failed: success was true when parsing with reporter" \
         if success
@@ -68,8 +74,9 @@ class Parslet::Atoms::Base
   #
   # @return [<Boolean, Object>] Result of the parse. If the first member is 
   #   true, the parse has succeeded. 
-  def setup_and_apply(source, error_reporter, consume_all)
-    context = Parslet::Atoms::Context.new(error_reporter)
+  def setup_and_apply(source, error_reporter, consume_all, left_recursion=false)
+    context = Parslet::Atoms::Context.new(
+      error_reporter, left_recursion: left_recursion)
     apply(source, context, consume_all)
   end
 

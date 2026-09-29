@@ -27,7 +27,7 @@ module Parslet
     #
     # @return [Array<Parslet::Cause>] A list of reasons for this cause. 
     def children
-      @children ||= []
+      (@children || []).compact
     end
     
     # Appends 'at line LINE char CHAR' to the string given. Use +pos+ to

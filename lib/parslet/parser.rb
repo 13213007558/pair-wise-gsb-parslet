@@ -59,7 +59,13 @@ class Parslet::Parser < Parslet::Atoms::Base
   end
   
   def try(source, context, consume_all)
-    root.try(source, context, consume_all)
+    if context.left_recursion?
+      # Go through the entity's #apply so that the root rule participates
+      # in memoization and left recursion handling like any other rule.
+      root.apply(source, context, consume_all)
+    else
+      root.try(source, context, consume_all)
+    end
   end
   
   def to_s_inner(prec)

@@ -82,6 +82,14 @@ module Parslet
     # @return [Parslet::Cause]
     attr_reader :parse_failure_cause
   end
+
+  # Raised when the grammar itself is at fault: a repetition (or a 
+  # left-recursive cycle used inside one) matched successfully without 
+  # consuming any input. Continuing would loop forever, so parslet 
+  # diagnoses the cycle by raising this error instead of hanging.
+  #
+  class InfiniteLoopError < StandardError
+  end
   
   module ClassMethods
     # Define an entity for the parser. This generates a method of the same
