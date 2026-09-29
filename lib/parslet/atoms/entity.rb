@@ -19,6 +19,15 @@ class Parslet::Atoms::Entity < Parslet::Atoms::Base
     @parslet = nil
   end
 
+  # True if this rule should be evaluated with the left recursion scheme
+  # even when the parse context doesn't enable it globally. Set through
+  # the :left_recursive rule option.
+  #
+  attr_writer :left_recursive
+  def left_recursive?
+    !!@left_recursive
+  end
+
   def try(source, context, consume_all)
     parslet.apply(source, context, consume_all)
   end

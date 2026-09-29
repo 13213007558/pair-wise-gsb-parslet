@@ -20,6 +20,15 @@ class Parslet::Scope
     def []=(k,v)
       @hash.store(k,v)
     end
+
+    # Returns a detached copy of this binding and all its parents. Storing
+    # values into either chain doesn't affect the other.
+    #
+    def snapshot
+      copy = self.class.new(parent && parent.snapshot)
+      @hash.each { |k, v| copy[k] = v }
+      copy
+    end
   end
   
   def [](k)
@@ -38,5 +47,20 @@ class Parslet::Scope
   end
   def pop
     @current = @current.parent
+  end
+
+  # Returns a detached copy of the current scope chain. Pass the result to
+  # #restore to roll the scope back to the state it had when the snapshot
+  # was taken.
+  #
+  def snapshot
+    @current.snapshot
+  end
+
+  # Restores a snapshot previously taken with #snapshot, discarding all
+  # captures made since.
+  #
+  def restore(snapshot)
+    @current = snapshot
   end
 end

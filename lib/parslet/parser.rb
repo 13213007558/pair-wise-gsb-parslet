@@ -56,10 +56,54 @@ class Parslet::Parser < Parslet::Atoms::Base
         self.send(name)
       end
     end
+
+    # Enables (or disables) support for left recursive rules in this
+    # parser. With left recursion enabled, rules may refer to themselves
+    # (directly or indirectly through other rules) in leftmost position:
+    #
+    #   rule(:expr) { expr >> str('+') >> term | term }
+    #
+    # Such rules are evaluated using a seed-growing algorithm that
+    # preserves ordered choice semantics and repeatedly extends the match
+    # until no more input can be consumed. Rules that can succeed without
+    # consuming input (nullable recursion) raise
+    # Parslet::LeftRecursionError.
+    #
+    # Left recursion can also be enabled per rule:
+    #
+    #   rule(:expr, left_recursive: true) { ... }
+    #
+    def left_recursion(enabled=true)
+      @left_recursion_enabled = enabled
+    end
+
+    # True if left recursion support is enabled for this parser class.
+    #
+    def left_recursion_enabled?
+      if instance_variable_defined?(:@left_recursion_enabled)
+        @left_recursion_enabled
+      elsif superclass.respond_to?(:left_recursion_enabled?)
+        superclass.left_recursion_enabled?
+      else
+        false
+      end
+    end
   end
   
   def try(source, context, consume_all)
-    root.try(source, context, consume_all)
+    # Apply the root rule through the context (instead of calling #try
+    # directly) so that the root rule takes part in caching and in the
+    # left recursion scheme like any other rule reference.
+    root.apply(source, context, consume_all)
+  end
+
+  # Creates the parse context, enabling left recursion if the parser
+  # class opts into it via .left_recursion.
+  #
+  def setup_and_apply(source, error_reporter, consume_all)
+    context = Parslet::Atoms::Context.new(
+      error_reporter, self.class.left_recursion_enabled?)
+    apply(source, context, consume_all)
   end
   
   def to_s_inner(prec)

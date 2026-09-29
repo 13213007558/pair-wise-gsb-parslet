@@ -90,7 +90,10 @@ class Parslet::Atoms::Base
       context.succ(source)
       # If a consume_all parse was made and doesn't result in the consumption
       # of all the input, that is considered an error. 
-      if consume_all && source.chars_left>0
+      # While left recursive rules are being evaluated, the check is
+      # suppressed: intermediate seed results consume only part of the
+      # input. The outermost evaluation enforces it instead.
+      if consume_all && source.chars_left>0 && context.enforce_consume_all?
         # Read 10 characters ahead. Why ten? I don't know. 
         offending_pos   = source.pos
         offending_input = source.consume(10)

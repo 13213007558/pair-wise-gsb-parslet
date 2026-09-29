@@ -82,6 +82,14 @@ module Parslet
     # @return [Parslet::Cause]
     attr_reader :parse_failure_cause
   end
+
+  # Raised when a left recursive rule can succeed without consuming any
+  # input (nullable recursion) or otherwise cannot make progress. Such
+  # grammars are degenerate: the recursive cycle would never terminate.
+  # Rewrite the rule so that every recursive cycle consumes input.
+  #
+  class LeftRecursionError < StandardError
+  end
   
   module ClassMethods
     # Define an entity for the parser. This generates a method of the same
@@ -99,6 +107,13 @@ module Parslet
     #     root :twobar
     #   end
     #
+    # Options:
+    #
+    # * :label - a label used in error messages for this rule.
+    # * :left_recursive - evaluate this rule with the left recursion
+    #   scheme, allowing the rule to refer to itself (directly or through
+    #   other rules) in leftmost position. See Parslet::Parser.left_recursion.
+    #
     def rule(name, opts={}, &definition)
       undef_method name if method_defined? name
       define_method(name) do
@@ -110,7 +125,16 @@ module Parslet
           self.instance_eval(&definition)
         }
         
-        @rules[name] = Atoms::Entity.new(name, opts[:label], &definition_closure)
+        entity = Atoms::Entity.new(name, opts[:label], &definition_closure)
+        # Rules of a parser that enables left recursion are marked, so
+        # that the scheme also applies when a rule is used outside of a
+        # full parser parse (e.g. my_parser.my_rule.parse(str)). An
+        # explicit :left_recursive option always wins.
+        entity.left_recursive = opts.fetch(:left_recursive) {
+          self.class.respond_to?(:left_recursion_enabled?) &&
+            self.class.left_recursion_enabled?
+        }
+        @rules[name] = entity
       end
     end
   end
