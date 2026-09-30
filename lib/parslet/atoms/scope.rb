@@ -14,10 +14,17 @@ class Parslet::Atoms::Scope < Parslet::Atoms::Base
   end
   
   def apply(source, context, consume_all)
+    result = nil
+    checkpoint = nil
     context.scope do
       parslet = block.call
-      return parslet.apply(source, context, consume_all)
+      checkpoint, result = context.indentation_transaction do
+        parslet.apply(source, context, consume_all)
+      end
     end
+    result
+  ensure
+    context.restore_indentation(checkpoint) if checkpoint
   end
   
   def to_s_inner(prec)

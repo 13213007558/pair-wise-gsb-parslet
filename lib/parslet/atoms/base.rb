@@ -40,13 +40,15 @@ class Parslet::Atoms::Base
       # gathering error information in the process.
       reporter = options[:reporter] || Parslet::ErrorReporter::Tree.new
       source.bytepos = 0
-      success, value = setup_and_apply(source, reporter, !options[:prefix])
+      context = Parslet::Atoms::Context.new(reporter)
+      success, value = apply(source, context, !options[:prefix])
       
       fail "Assertion failed: success was true when parsing with reporter" \
         if success
       
       # Value is a Parslet::Cause, which can be turned into an exception:
-      value.raise
+      cause = value.respond_to?(:indentation_cause) ? value.indentation_cause : nil
+      (cause || value).raise
       
       fail "NEVER REACHED"
     end
@@ -82,8 +84,13 @@ class Parslet::Atoms::Base
   #   all input by itself.
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
-    
-    success, _ = result = context.try_with_cache(self, source, consume_all)
+    indentation_checkpoint = context.indentation_checkpoint
+
+    success, _ = result = begin
+      answer = context.try_with_cache(self, source, consume_all)
+      context.restore_indentation(indentation_checkpoint) unless answer.first
+      answer
+    end
 
     if success
       # Notify context

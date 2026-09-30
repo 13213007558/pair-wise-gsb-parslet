@@ -34,7 +34,9 @@ module Parslet
       #
       def err(atom, source, message, children=nil)
         position = source.pos
-        Cause.format(source, position, message, children)
+        cause = Cause.format(source, position, message, children)
+        cause.indentation_error! if atom.is_a?(Parslet::Indentation::Level)
+        cause
       end
 
       # Produces an error cause that combines the message at the current level
@@ -50,7 +52,9 @@ module Parslet
       #
       def err_at(atom, source, message, pos, children=nil)
         position = pos
-        Cause.format(source, position, message, children)
+        cause = Cause.format(source, position, message, children)
+        cause.indentation_error! if atom.is_a?(Parslet::Indentation::Level)
+        cause
       end
 
       # Notification that an expression successfully parsed

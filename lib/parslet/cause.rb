@@ -52,6 +52,26 @@ module Parslet
       children.each { |c| c.set_label(l) }
     end
 
+    def indentation_error!
+      @indentation_error = true
+      children.each(&:indentation_error!)
+    end
+
+    def indentation_error?
+      @indentation_error == true
+    end
+
+    def indentation_cause
+      return self if indentation_error?
+
+      children.each do |child|
+        found = child.indentation_cause
+        return found if found
+      end
+
+      nil
+    end
+
     def to_s
       line, column = source.line_and_column(pos)
       # Allow message to be a list of objects. Join them here, since we now

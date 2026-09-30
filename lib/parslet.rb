@@ -184,6 +184,15 @@ module Parslet
     Parslet::Atoms::Scope.new(block)
   end
   module_function :scope
+
+  # Creates an indentation policy with line-aware same, indent and dedent
+  # atoms. The policy keeps its mutable state in the parsing context, so one
+  # parser instance can be reused in concurrent or sequential parses.
+  #
+  def indentation(options={})
+    Parslet::Indentation.new(options)
+  end
+  module_function :indentation
   
   # Designates a piece of the parser as being dynamic. Dynamic parsers can
   # either return a parser at runtime, which will be applied on the input, or

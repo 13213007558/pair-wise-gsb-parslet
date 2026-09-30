@@ -35,8 +35,11 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 
   def try(source, context, consume_all)
     errors = alternatives.map { |a|
-      success, value = result = a.apply(source, context, consume_all)
-      return result if success
+      transaction_checkpoint, (success, value) = context.indentation_transaction do
+        a.apply(source, context, consume_all)
+      end
+      return [success, value] if success
+      context.rollback_indentation_transaction(transaction_checkpoint)
       
       # Aggregate all errors
       value

@@ -92,5 +92,10 @@ module Parslet
     def line_and_column(position=nil)
       @line_cache.line_and_column(position || self.bytepos)
     end
+
+    def beginning_of_line?
+      bytepos.zero? || @str.string.getbyte(bytepos - 1) == 10 ||
+        @str.string.getbyte(bytepos - 1) == 13
+    end
   end
 end

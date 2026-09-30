@@ -26,12 +26,15 @@ class Parslet::Atoms::Sequence < Parslet::Atoms::Base
     # Presize an array
     result = Array.new(parslets.size + 1)
     result[0] = :sequence
-    
+
     parslets.each_with_index do |p, idx|
-      child_consume_all = consume_all && (idx == parslets.size-1)
-      success, value = p.apply(source, context, child_consume_all) 
+      checkpoint, (success, value) = context.indentation_transaction do
+        child_consume_all = consume_all && (idx == parslets.size-1)
+        p.apply(source, context, child_consume_all)
+      end
 
       unless success
+        context.rollback_indentation_transaction(checkpoint)
         return context.err(self, source, error_msgs[:failed], [value])
       end
 

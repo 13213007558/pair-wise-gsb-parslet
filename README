@@ -51,6 +51,17 @@ SYNOPSIS
   # and then
   Smalltalk.new.parse('smalltalk')
 
+  # indentation policies keep their stack in the parsing context
+  layout = indentation(
+    comments: '#',
+    tabs: :expand,
+    tab_width: 2)
+  rule(:block) do
+    layout.same >> statement >> (
+      newline >> layout.indent >> block >> layout.dedent).maybe
+  end
+  root { block >> layout.eof }
+
 FEATURES
 
   * Tools for every part of the parser chain
