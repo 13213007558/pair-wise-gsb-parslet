@@ -24,8 +24,9 @@ class Parslet::Atoms::Capture < Parslet::Atoms::Base
     success, value = result = parslet.apply(source, context, consume_all)
 
     if success
-      context.captures[name.to_sym] = 
-        flatten(value)
+      captured = flatten(value)
+      context.captures[name.to_sym] = captured
+      context.record_capture(name.to_sym, captured)
     end
     
     return result
@@ -35,4 +36,3 @@ class Parslet::Atoms::Capture < Parslet::Atoms::Base
     "(#{name.inspect} = #{parslet.to_s(prec)})"
   end
 end
-

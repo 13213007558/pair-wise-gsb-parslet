@@ -6,6 +6,13 @@
 
   + Specification for mixing parslet parsers (Artur Komarov).
 
+  + Parslet::Session: incremental parsing sessions. Parse a text once, then
+    submit inserts, deletes and replacements in coordinates of the old text;
+    unchanged regions are served from the packrat cache. Reads by failed
+    branches and lookaheads count towards cache validity, dynamic rules are
+    never reused across edits, and slice positions, line/column information
+    and captures are remapped to the new text. 
+
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).
     Also includes testing on newer Ruby versions. 
 

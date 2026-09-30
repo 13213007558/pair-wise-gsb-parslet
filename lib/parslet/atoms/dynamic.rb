@@ -19,6 +19,7 @@ class Parslet::Atoms::Dynamic < Parslet::Atoms::Base
   end
   
   def try(source, context, consume_all)
+    context.note_dynamic
     result = block.call(source, context)
     
     # Result is a parslet atom.
@@ -29,4 +30,3 @@ class Parslet::Atoms::Dynamic < Parslet::Atoms::Base
     "dynamic { ... }"
   end
 end
-

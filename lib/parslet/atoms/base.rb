@@ -73,6 +73,39 @@ class Parslet::Atoms::Base
     apply(source, context, consume_all)
   end
 
+  # Like #parse, but parses using a caller-provided source and context. This
+  # allows reusing a packrat cache across several parses of evolving input;
+  # see Parslet::Session. On failure, raises Parslet::ParseFailed just like
+  # #parse does. 
+  #
+  # @param source [Parslet::Source] source to parse
+  # @param context [Parslet::Atoms::Context] context (cache) to parse with
+  # @return [Hash, Array, Parslet::Slice] PORO (Plain old Ruby object) result
+  #   tree
+  #
+  def parse_with_context(source, context)
+    success, value = apply(source, context, true)
+
+    unless success
+      # Rerun the parse with an error reporter to produce a meaningful
+      # error, just like #parse does. 
+      reporter = Parslet::ErrorReporter::Tree.new
+      source.bytepos = 0
+      error_context = Parslet::Atoms::Context.new(reporter)
+      success, value = apply(source, error_context, true)
+
+      fail "Assertion failed: success was true when parsing with reporter" \
+        if success
+
+      # Value is a Parslet::Cause, which can be turned into an exception:
+      value.raise
+
+      fail "NEVER REACHED"
+    end
+
+    return flatten(value)
+  end
+
   # Calls the #try method of this parslet. Success consumes input, error will 
   # rewind the input. 
   #
