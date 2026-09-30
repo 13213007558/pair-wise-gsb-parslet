@@ -35,4 +35,3 @@ class Parslet::Atoms::Capture < Parslet::Atoms::Base
     "(#{name.inspect} = #{parslet.to_s(prec)})"
   end
 end
-

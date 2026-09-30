@@ -9,13 +9,18 @@ module Parslet
   # Wraps the input string for parslet. 
   #
   class Source
-    def initialize(str)
+    attr_reader :string
+    attr_reader :line_cache
+
+    def initialize(str, observer=nil)
       raise(
         ArgumentError, 
         "Must construct Source with a string like object."
       ) unless str.respond_to?(:to_str)
 
+      @string = str
       @str = StringScanner.new(str)
+      @observer = observer
 
       # maps 1 => /./m, 2 => /../m, etc...
       @re_cache = Hash.new { |h,k| 
@@ -31,7 +36,10 @@ module Parslet
     # @return [Boolean] true if the pattern matches at #pos
     #
     def matches?(pattern)
-      @str.match?(pattern)
+      position = @str.pos
+      matched_size = @str.match?(pattern)
+      track_read(position, matched_size.to_i)
+      matched_size
     end
     alias match matches?
     
@@ -41,6 +49,7 @@ module Parslet
     def consume(n)
       position = self.pos
       slice_str = @str.scan(@re_cache[n])
+      track_read(position.bytepos, slice_str.bytesize)
       slice = Parslet::Slice.new(
         position, 
         slice_str,
@@ -91,6 +100,17 @@ module Parslet
     #
     def line_and_column(position=nil)
       @line_cache.line_and_column(position || self.bytepos)
+    end
+
+    private
+
+    def track_read(position, byte_size, eof=false)
+      return unless @observer
+
+      ending = position + byte_size
+      ending = position + 1 if ending <= position
+      eof ||= position >= @str.string.bytesize
+      @observer.parslet_read(position, ending, eof)
     end
   end
 end

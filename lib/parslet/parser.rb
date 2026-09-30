@@ -61,6 +61,10 @@ class Parslet::Parser < Parslet::Atoms::Base
   def try(source, context, consume_all)
     root.try(source, context, consume_all)
   end
+
+  def session(text, options={})
+    Parslet::Session.new(self, text, options)
+  end
   
   def to_s_inner(prec)
     root.to_s(prec)

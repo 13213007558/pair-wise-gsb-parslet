@@ -73,6 +73,10 @@ class Parslet::Atoms::Base
     apply(source, context, consume_all)
   end
 
+  def session(text, options={})
+    Parslet::Session.new(self, text, options)
+  end
+
   # Calls the #try method of this parslet. Success consumes input, error will 
   # rewind the input. 
   #

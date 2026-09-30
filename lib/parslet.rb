@@ -201,6 +201,11 @@ module Parslet
   end
   module_function :dynamic
 
+  def session(text, options={})
+    Session.new(self, text, options)
+  end
+  module_function :session
+
   # Returns a parslet atom that parses infix expressions. Operations are 
   # specified as a list of <atom, precedence, associativity> tuples, where 
   # atom is simply the parslet atom that matches an operator, precedence is 
@@ -297,6 +302,7 @@ module Parslet
   module_function :subtree
 
   autoload :Expression, 'parslet/expression'
+  autoload :Session, 'parslet/session'
 end
 
 require 'parslet/slice'

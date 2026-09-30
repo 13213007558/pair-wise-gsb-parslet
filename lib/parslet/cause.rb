@@ -29,6 +29,20 @@ module Parslet
     def children
       @children ||= []
     end
+
+    def remap(source, position_offset, &block)
+      position = @pos.respond_to?(:bytepos) ? @pos.bytepos + position_offset : @pos
+      children = (children || []).map do |child|
+        child.remap(source, position_offset, &block)
+      end
+      message = yield(@message)
+      self.class.new(
+        message,
+        source,
+        Parslet::Position.new(source.string, position),
+        children
+      )
+    end
     
     # Appends 'at line LINE char CHAR' to the string given. Use +pos+ to
     # override the position of the +source+. This method returns an object

@@ -39,4 +39,3 @@ class Parslet::Atoms::Str < Parslet::Atoms::Base
     "'#{str}'"
   end
 end
-

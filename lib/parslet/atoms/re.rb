@@ -38,4 +38,3 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
     match.inspect[1..-2]
   end
 end
-
