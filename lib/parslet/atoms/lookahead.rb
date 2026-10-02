@@ -26,6 +26,7 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
   def try(source, context, consume_all)
     rewind_pos  = source.bytepos
     error_pos   = source.pos
+    cut_state   = context.save_cut_state
 
     success, _ = bound_parslet.apply(source, context, consume_all)
     
@@ -39,8 +40,11 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
     
   # This is probably the only parslet that rewinds its input in #try.
   # Lookaheads NEVER consume their input, even on success, that's why. 
+  # Lookaheads are speculative: cuts crossed inside them never leave
+  # commit state behind either.
   ensure 
     source.bytepos = rewind_pos
+    context.restore_cut_state(cut_state)
   end
   
   precedence LOOKAHEAD

@@ -34,13 +34,24 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
-    errors = alternatives.map { |a|
-      success, value = result = a.apply(source, context, consume_all)
-      return result if success
-      
-      # Aggregate all errors
-      value
-    }
+    errors = []
+
+    context.push_choice
+    begin
+      alternatives.each do |a|
+        success, value = result = a.apply(source, context, consume_all)
+        return result if success
+
+        # A cut inside this alternative commits us to it: don't try any of
+        # the remaining alternatives and report the real failure as is.
+        return result if context.cut?
+
+        # Aggregate all errors
+        errors << value
+      end
+    ensure
+      context.pop_choice
+    end
     
     # If we reach this point, all alternatives have failed. 
     context.err(self, source, error_msg, errors)

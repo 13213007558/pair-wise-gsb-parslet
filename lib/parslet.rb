@@ -169,6 +169,27 @@ module Parslet
     Atoms::Re.new('.')
   end
   module_function :any
+
+  # Returns an atom that commits the parser to the choice currently being
+  # made. Once the cut has been crossed, the innermost enclosing
+  # alternative ('|') will not try any of its remaining alternatives; a
+  # later failure is reported directly, at its real position, instead of
+  # backtracking into a completely different branch.
+  #
+  # The commit is scoped to the innermost enclosing alternative and never
+  # leaks into outer ones. Cuts crossed inside a lookahead leave no commit
+  # state behind.
+  #
+  #   # After reading 'section', a syntax error in the body is reported
+  #   # directly instead of trying 'other_section'.
+  #   (str('section') >> cut >> body) | other_section
+  #
+  # @return [Parslet::Atoms::Cut] a parslet atom
+  #
+  def cut
+    Atoms::Cut.new
+  end
+  module_function :cut
   
   # Introduces a new capture scope. This means that all old captures stay
   # accessible, but new values stored will only be available during the block

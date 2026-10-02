@@ -13,6 +13,7 @@ module Parslet::Atoms
       @cache = Hash.new { |h, k| h[k] = {} }
       @reporter = reporter
       @captures = Parslet::Scope.new
+      @cut_marks = []
     end
     
     # Caches a parse answer for obj at source.pos. Applying the same parslet
@@ -86,6 +87,50 @@ module Parslet::Atoms
       yield
     ensure
       captures.pop
+    end
+
+    # Commits to the innermost enclosing choice (see
+    # Parslet::Atoms::Alternative). After this has been called, the
+    # innermost choice will not try any more of its alternatives; a failure
+    # is reported directly. If there is no enclosing choice, cutting is a
+    # no-op.
+    #
+    def cut!
+      @cut_marks[-1] = true unless @cut_marks.empty?
+    end
+
+    # Returns true if the innermost enclosing choice has been committed to
+    # using #cut!.
+    #
+    def cut?
+      @cut_marks.last ? true : false
+    end
+
+    # Starts a new choice. Choices nest; a cut always commits to the
+    # innermost choice only and never leaks into outer ones.
+    #
+    def push_choice
+      @cut_marks.push(false)
+    end
+
+    # Ends the innermost choice, discarding its commit state.
+    #
+    def pop_choice
+      @cut_marks.pop
+    end
+
+    # Snapshots the current commit state of all enclosing choices. Used by
+    # speculative parses (lookaheads) that must not leave commit state
+    # behind.
+    #
+    def save_cut_state
+      @cut_marks.dup
+    end
+
+    # Restores a commit state snapshot made with #save_cut_state.
+    #
+    def restore_cut_state(state)
+      @cut_marks = state
     end
     
   private 

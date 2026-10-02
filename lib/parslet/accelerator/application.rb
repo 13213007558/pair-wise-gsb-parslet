@@ -34,6 +34,9 @@ module Parslet::Accelerator
     def visit_lookahead(positive, atom)
       transform Parslet::Atoms::Lookahead.new(atom, positive)
     end
+    def visit_cut
+      transform Parslet::Atoms::Cut.new
+    end
     def visit_re(regexp)
       transform Parslet::Atoms::Re.new(regexp)
     end

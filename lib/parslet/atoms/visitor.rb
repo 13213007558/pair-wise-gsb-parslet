@@ -70,6 +70,15 @@ module Parslet::Atoms
       visitor.visit_lookahead(positive, bound_parslet)
     end
   end
+
+  class Cut
+    # Call back visitors #visit_cut method. See parslet/export for an
+    # example.
+    #
+    def accept(visitor)
+      visitor.visit_cut
+    end
+  end
   
   class Re
     # Call back visitors #visit_re method. See parslet/export for an example. 

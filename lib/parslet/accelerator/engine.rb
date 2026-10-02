@@ -51,6 +51,9 @@ module Parslet::Accelerator
         return positive == true && @engine.match(atom, expr)
       end
     end
+    def visit_cut
+      false
+    end
     def visit_re(regexp)
       match(:re) do |*bind_conditions|
         bind_conditions.all? { |bind_cond| 

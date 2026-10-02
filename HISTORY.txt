@@ -9,6 +9,11 @@
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).
     Also includes testing on newer Ruby versions. 
 
+  + New 'cut' combinator: commits to the innermost enclosing choice once
+    crossed, so failures after a keyword are reported directly instead of
+    backtracking into unrelated alternatives. Commits never leak out of
+    their choice or out of lookaheads.
+
 
 = 2.0 / 16Feb2020
 
