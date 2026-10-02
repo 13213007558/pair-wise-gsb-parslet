@@ -78,6 +78,14 @@ module Parslet::Atoms
       visitor.visit_re(match)
     end
   end
+
+  class Layout
+    # Call back visitors #visit_layout method.
+    #
+    def accept(visitor)
+      visitor.visit_layout(relation)
+    end
+  end
 end
 
 class Parslet::Parser

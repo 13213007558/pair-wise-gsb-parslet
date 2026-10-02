@@ -74,6 +74,28 @@ module Parslet
     def pos
       Position.new(@str.string, @str.pos)
     end
+
+    # Returns true if the current position is at the beginning of a line:
+    # either at the start of the input or directly after a newline.
+    #
+    def at_line_start?
+      pos = @str.pos
+      pos == 0 || @str.string.getbyte(pos-1) == 10 # \n
+    end
+
+    # Returns true if the remaining input contains only blank lines and
+    # whitespace, i.e. no more content.
+    #
+    def remaining_blank?
+      @str.rest.match?(/\A[ \t\n]*\z/)
+    end
+
+    # Advances the scan pointer to the end of the input.
+    #
+    def skip_to_end
+      @str.terminate
+    end
+
     def bytepos
       @str.pos
     end

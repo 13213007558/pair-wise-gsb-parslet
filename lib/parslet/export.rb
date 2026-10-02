@@ -49,6 +49,10 @@ class Parslet::Parser
         (positive ? '&' : '!') <<
         bound_parslet.accept(self)
       end
+
+      def visit_layout(relation)
+        relation == :same ? 'same_indent' : relation.to_s
+      end
     end
 
     class Treetop < Citrus
@@ -159,4 +163,3 @@ class Parslet::Parser
       pretty_print(self.class.name, root)
   end
 end
-

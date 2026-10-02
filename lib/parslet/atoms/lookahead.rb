@@ -25,6 +25,7 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
   
   def try(source, context, consume_all)
     rewind_pos  = source.bytepos
+    layout_mark = context.layout_mark
     error_pos   = source.pos
 
     success, _ = bound_parslet.apply(source, context, consume_all)
@@ -39,8 +40,11 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
     
   # This is probably the only parslet that rewinds its input in #try.
   # Lookaheads NEVER consume their input, even on success, that's why. 
+  # Layout state is rolled back as well: looking ahead must never change
+  # the current indentation level. 
   ensure 
     source.bytepos = rewind_pos
+    context.layout_rollback(layout_mark)
   end
   
   precedence LOOKAHEAD

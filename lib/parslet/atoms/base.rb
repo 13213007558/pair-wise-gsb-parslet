@@ -30,7 +30,8 @@ class Parslet::Atoms::Base
 
     # Try to cheat. Assuming that we'll be able to parse the input, don't 
     # run error reporting code. 
-    success, value = setup_and_apply(source, nil, !options[:prefix])
+    success, value = apply(
+      source, new_context(nil), !options[:prefix])
     
     # If we didn't succeed the parse, raise an exception for the user. 
     # Stack trace will be off, but the error tree should explain the reason
@@ -40,11 +41,20 @@ class Parslet::Atoms::Base
       # gathering error information in the process.
       reporter = options[:reporter] || Parslet::ErrorReporter::Tree.new
       source.bytepos = 0
-      success, value = setup_and_apply(source, reporter, !options[:prefix])
+      context = new_context(reporter)
+      success, value = apply(source, context, !options[:prefix])
       
       fail "Assertion failed: success was true when parsing with reporter" \
         if success
       
+      # A layout (tab) policy violation anywhere in the input is the most
+      # useful error to report: it pinpoints the exact line and column of
+      # the problem. 
+      if (violation = context.layout_violation)
+        Parslet::Cause.format(
+          source, violation.bytepos, violation.message).raise
+      end
+
       # Value is a Parslet::Cause, which can be turned into an exception:
       value.raise
       
@@ -69,8 +79,14 @@ class Parslet::Atoms::Base
   # @return [<Boolean, Object>] Result of the parse. If the first member is 
   #   true, the parse has succeeded. 
   def setup_and_apply(source, error_reporter, consume_all)
-    context = Parslet::Atoms::Context.new(error_reporter)
-    apply(source, context, consume_all)
+    apply(source, new_context(error_reporter), consume_all)
+  end
+
+  # Creates the context to parse within. Overridden in Parslet::Parser to
+  # inject the parser wide layout policy. 
+  #
+  def new_context(error_reporter)
+    Parslet::Atoms::Context.new(error_reporter)
   end
 
   # Calls the #try method of this parslet. Success consumes input, error will 
@@ -82,7 +98,8 @@ class Parslet::Atoms::Base
   #   all input by itself.
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
-    
+    layout_mark = context.layout_mark
+
     success, _ = result = context.try_with_cache(self, source, consume_all)
 
     if success
@@ -91,13 +108,22 @@ class Parslet::Atoms::Base
       # If a consume_all parse was made and doesn't result in the consumption
       # of all the input, that is considered an error. 
       if consume_all && source.chars_left>0
+        # In layout (indentation sensitive) grammars, blank lines are not
+        # content - not even at the end of input. Trailing blank lines are
+        # simply consumed here. 
+        if context.layout_used? && source.remaining_blank?
+          source.skip_to_end
+          return result
+        end
+
         # Read 10 characters ahead. Why ten? I don't know. 
         offending_pos   = source.pos
         offending_input = source.consume(10)
         
         # Rewind input (as happens always in error case)
         source.bytepos  = old_pos
-        
+        context.layout_rollback(layout_mark)
+
         return context.err_at(
           self, 
           source, 
@@ -112,6 +138,7 @@ class Parslet::Atoms::Base
     
     # We only reach this point if the parse has failed. Rewind the input.
     source.bytepos = old_pos
+    context.layout_rollback(layout_mark)
     return result
   end
   

@@ -56,6 +56,39 @@ class Parslet::Parser < Parslet::Atoms::Base
         self.send(name)
       end
     end
+
+    # Configures the layout (indentation) policy for this parser. This is
+    # the central place that decides how tab characters in indentation are
+    # treated; see Parslet::Layout::Policy for the available options.
+    #
+    # Example:
+    #
+    #   class MyParser < Parslet::Parser
+    #     layout tab: :expand, tab_width: 4
+    #   end
+    #
+    def layout(options)
+      # Validate eagerly, so that a misspelled policy fails fast.
+      Parslet::Layout::Policy.build(options)
+      @layout_options = options
+    end
+
+    # The layout options configured with .layout, inherited from superclass
+    # parsers unless overridden. 
+    #
+    def layout_options
+      return @layout_options if instance_variable_defined?(:@layout_options)
+      superclass.respond_to?(:layout_options) ?
+        superclass.layout_options :
+        nil
+    end
+  end
+
+  # Creates the context to parse within. The context carries the layout
+  # policy configured through .layout.
+  #
+  def new_context(error_reporter)
+    Parslet::Atoms::Context.new(error_reporter, self.class.layout_options)
   end
   
   def try(source, context, consume_all)

@@ -40,6 +40,9 @@ module Parslet::Accelerator
     def visit_str(str)
       transform Parslet::Atoms::Str.new(str)
     end
+    def visit_layout(relation)
+      transform Parslet::Atoms::Layout.new(relation)
+    end
 
     def transform atom
       @rules.each do |expr, action|

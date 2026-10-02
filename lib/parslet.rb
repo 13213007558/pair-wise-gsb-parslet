@@ -201,6 +201,42 @@ module Parslet
   end
   module_function :dynamic
 
+  # Returns an atom that enters a deeper indentation level: the next content
+  # line (blank lines are skipped) must be indented more than the current
+  # level. Consumes the line break and the indentation of that line.
+  #
+  # Layout atoms are composable: the indentation stack is maintained by the
+  # parse context, rolls back with failed alternatives and is never changed
+  # by lookaheads. See Parslet::Parser.layout for tab policy configuration.
+  #
+  # Example:
+  #   rule(:block) { indent >> statement >> (same_indent >> statement).repeat >> dedent }
+  #
+  def indent
+    Atoms::Layout.new(:indent)
+  end
+  module_function :indent
+
+  # Returns an atom that requires the next content line (blank lines are
+  # skipped) to be indented exactly at the current level. Consumes the line
+  # break and the indentation of that line.
+  #
+  def same_indent
+    Atoms::Layout.new(:same)
+  end
+  module_function :same_indent
+
+  # Returns an atom that leaves the current indentation level: the next
+  # content line (blank lines are skipped) must be indented less than the
+  # current level. Consumes the line break, but leaves the indentation of
+  # that line for the enclosing level. Fails if the indentation matches no
+  # outer level.
+  #
+  def dedent
+    Atoms::Layout.new(:dedent)
+  end
+  module_function :dedent
+
   # Returns a parslet atom that parses infix expressions. Operations are 
   # specified as a list of <atom, precedence, associativity> tuples, where 
   # atom is simply the parslet atom that matches an operator, precedence is 
@@ -302,6 +338,7 @@ end
 require 'parslet/slice'
 require 'parslet/cause'
 require 'parslet/source'
+require 'parslet/layout'
 require 'parslet/atoms'
 require 'parslet/pattern'
 require 'parslet/pattern/binding'

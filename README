@@ -56,6 +56,8 @@ FEATURES
   * Tools for every part of the parser chain
   * Transformers generate Abstract Syntax Trees
   * Accelerators transform parsers, making them quite a bit faster
+  * Layout primitives (indent, same_indent, dedent) for indentation
+    sensitive grammars
   * Pluggable error reporters
   * Graphviz export for your parser
   * Rspec testing support rig

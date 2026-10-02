@@ -67,6 +67,15 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     # break_on would get thrown away. It turns out, that contains very
     # interesting information in a lot of cases. 
     #
+    # In layout (indentation sensitive) grammars, trailing blank lines are
+    # not content and don't count as unconsumed input; they are consumed
+    # when the parse as a whole completes (see Atoms::Base#apply). 
+    #
+    if consume_all && source.chars_left>0 &&
+        context.layout_used? && source.remaining_blank?
+      return succ(accum)
+    end
+
     return context.err(
       self, 
       source, 
@@ -84,4 +93,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-
