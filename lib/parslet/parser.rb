@@ -59,7 +59,9 @@ class Parslet::Parser < Parslet::Atoms::Base
   end
   
   def try(source, context, consume_all)
-    root.try(source, context, consume_all)
+    context.rule_call(root, source, consume_all, force_raw: context.reporter?) do
+      root.evaluate_definition!(source, context, false)
+    end
   end
   
   def to_s_inner(prec)
