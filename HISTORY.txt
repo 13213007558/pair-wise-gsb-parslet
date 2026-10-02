@@ -4,6 +4,12 @@
   We're in maintenance mode! The community is really stepping up here though, sending
   interesting additions our way. Here's what has been merged this far: 
 
+  + New 'cut' atom (Parslet#cut): commits the innermost enclosing alternation
+    to the current branch. Failures after the cut are reported directly with
+    their real position instead of backtracking into sibling alternatives.
+    Commits never penetrate outer alternations, and speculation inside
+    lookaheads leaves no commit state behind.
+
   + Specification for mixing parslet parsers (Artur Komarov).
 
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).

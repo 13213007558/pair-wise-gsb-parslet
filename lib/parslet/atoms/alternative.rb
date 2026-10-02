@@ -34,13 +34,24 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
-    errors = alternatives.map { |a|
+    errors = []
+    alternatives.each do |a|
+      # Each branch gets its own cut scope: A cut fired inside this branch
+      # commits only this alternation, never an outer one.
+      context.push_cut_barrier
       success, value = result = a.apply(source, context, consume_all)
+      committed = context.pop_cut_barrier
+
       return result if success
-      
+
+      # A cut was fired in this branch: The alternation is committed and
+      # fails right here, propagating the branchs error (and its real
+      # failure position) instead of trying the remaining alternatives.
+      return result if committed
+
       # Aggregate all errors
-      value
-    }
+      errors << value
+    end
     
     # If we reach this point, all alternatives have failed. 
     context.err(self, source, error_msg, errors)

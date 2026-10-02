@@ -27,6 +27,9 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
     rewind_pos  = source.bytepos
     error_pos   = source.pos
 
+    # Speculation must not leak commit state: Cuts fired inside the
+    # lookahead are scoped to this barrier and discarded on pop.
+    context.push_cut_barrier
     success, _ = bound_parslet.apply(source, context, consume_all)
     
     if positive
@@ -40,6 +43,7 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
   # This is probably the only parslet that rewinds its input in #try.
   # Lookaheads NEVER consume their input, even on success, that's why. 
   ensure 
+    context.pop_cut_barrier
     source.bytepos = rewind_pos
   end
   

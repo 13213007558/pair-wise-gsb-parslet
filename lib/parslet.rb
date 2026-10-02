@@ -170,6 +170,28 @@ module Parslet
   end
   module_function :any
   
+  # Returns an atom that commits the innermost enclosing alternation to 
+  # the branch currently being tried. Once the parse has passed a cut, 
+  # failure of the rest of that branch will not backtrack into the 
+  # remaining alternatives of that alternation; the failure is reported 
+  # directly, with its real position. 
+  #
+  # The commit is scoped to the innermost enclosing alternation and never
+  # penetrates outer ones. Cuts fired inside a lookahead (positive or
+  # negative) are discarded when the speculation ends. 
+  #
+  #   # After the 'header' keyword, a syntax error is reported as such
+  #   # instead of trying to parse the input as a 'footer' section.
+  #   rule(:section) { header_section | footer_section }
+  #   rule(:header_section) { str('header') >> cut >> header_body }
+  #
+  # @return [Parslet::Atoms::Cut] a parslet atom
+  #
+  def cut
+    Atoms::Cut.new
+  end
+  module_function :cut
+  
   # Introduces a new capture scope. This means that all old captures stay
   # accessible, but new values stored will only be available during the block
   # given and the old values will be restored after the block. 
