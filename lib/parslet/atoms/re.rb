@@ -34,8 +34,11 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
     return context.err(self, source, error_msgs[:failed])
   end
 
+  def consumes_layout_content?
+    true
+  end
+
   def to_s_inner(prec)
     match.inspect[1..-2]
   end
 end
-

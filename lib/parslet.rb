@@ -302,6 +302,7 @@ end
 require 'parslet/slice'
 require 'parslet/cause'
 require 'parslet/source'
+require 'parslet/layout'
 require 'parslet/atoms'
 require 'parslet/pattern'
 require 'parslet/pattern/binding'

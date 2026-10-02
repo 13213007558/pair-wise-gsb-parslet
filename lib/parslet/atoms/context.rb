@@ -13,6 +13,10 @@ module Parslet::Atoms
       @cache = Hash.new { |h, k| h[k] = {} }
       @reporter = reporter
       @captures = Parslet::Scope.new
+      @layout_indents = [0]
+      @layout_configs = []
+      @layout_phase = nil
+      @default_layout_config = Parslet::Layout::Config.default
     end
     
     # Caches a parse answer for obj at source.pos. Applying the same parslet
@@ -25,20 +29,27 @@ module Parslet::Atoms
     #
     def try_with_cache(obj, source, consume_all)
       beg = source.bytepos
+      cache_key = [obj.object_id, layout_snapshot, layout_config]
         
       # Not in cache yet? Return early.
-      unless entry = lookup(obj, beg)
+      unless entry = lookup(beg, cache_key)
         result = obj.try(source, self, consume_all)
     
         if obj.cached?
-          set obj, beg, [result, source.bytepos-beg]
+          set(beg, cache_key, [
+            result,
+            source.bytepos-beg,
+            result.first ? layout_snapshot : nil
+          ])
         end
         
         return result
       end
 
       # the condition in unless has returned true, so entry is not nil.
-      result, advance = entry
+      result, advance, indents = entry
+
+      restore_layout_snapshot(indents) if indents
 
       # The data we're skipping here has been read before. (since it is in 
       # the cache) PLUS the actual contents are not interesting anymore since
@@ -77,6 +88,53 @@ module Parslet::Atoms
     #   context.captures[:foobar] # => returns capture :foobar
     #
     attr_reader :captures
+    attr_reader :layout_indents
+    attr_reader :layout_phase
+
+    def layout_config
+      @layout_configs.last || @default_layout_config
+    end
+
+    def begin_layout(config)
+      @layout_configs.push(config)
+    end
+
+    def end_layout(config)
+      index = @layout_configs.rindex(config)
+      @layout_configs.delete_at(index) if index
+    end
+
+    def layout_checkpoint
+      [layout_snapshot, @layout_configs.dup]
+    end
+
+    def restore_layout(checkpoint)
+      snapshot, configs = checkpoint
+      restore_layout_snapshot(snapshot)
+      @layout_configs.replace(configs)
+    end
+
+    def layout_at_indentation
+      @layout_phase = :indentation
+    end
+
+    def layout_at_content
+      @layout_phase = :content
+    end
+
+    def layout_content_consumed(atom, source, old_pos)
+      @layout_phase = nil if atom.consumes_layout_content? &&
+        source.bytepos != old_pos
+    end
+
+    def layout_snapshot
+      [@layout_indents.dup, @layout_phase]
+    end
+
+    def restore_layout_snapshot(snapshot)
+      @layout_indents.replace(snapshot.first)
+      @layout_phase = snapshot.last
+    end
     
     # Starts a new scope. Use the #scope method of Parslet::Atoms::DSL
     # to call this. 
@@ -93,11 +151,11 @@ module Parslet::Atoms
     # most performance benefit. This is a hot spot; going through
     # Atoms::Base#hash doesn't yield as much.
     #
-    def lookup(obj, pos)
-      @cache[pos][obj.object_id] 
+    def lookup(pos, key)
+      @cache[pos][key] 
     end
-    def set(obj, pos, val)
-      @cache[pos][obj.object_id] = val
+    def set(pos, key, val)
+      @cache[pos][key] = val
     end
   end
 end

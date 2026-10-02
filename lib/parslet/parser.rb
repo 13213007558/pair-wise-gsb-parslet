@@ -31,6 +31,27 @@ class Parslet::Parser < Parslet::Atoms::Base
   include Parslet
 
   class << self # class methods
+    # Configures layout-sensitive parsing for this parser. Tab width sets the
+    # visual column of tab stops; tab policy can be :spaces, :tabs,
+    # :consistent, or :mixed.
+    #
+    def layout(tab_width: 8, tab_policy: :consistent)
+      @layout_config = Parslet::Layout::Config.new(
+        tab_width: tab_width,
+        tab_policy: tab_policy
+      )
+    end
+
+    def layout_config
+      if defined?(@layout_config) && @layout_config
+        @layout_config
+      elsif superclass.respond_to?(:layout_config)
+        superclass.layout_config
+      else
+        Parslet::Layout::Config.default
+      end
+    end
+
     # Define the parsers #root function. This is the place where you start 
     # parsing; if you have a rule for 'file' that describes what should be 
     # in a file, this would be your root declaration: 
@@ -57,9 +78,19 @@ class Parslet::Parser < Parslet::Atoms::Base
       end
     end
   end
+
+  def layout
+    @layout ||= Parslet::Layout.new(self.class.layout_config)
+  end
   
   def try(source, context, consume_all)
-    root.try(source, context, consume_all)
+    config = self.class.layout_config
+    context.begin_layout(config)
+    begin
+      root.try(source, context, consume_all)
+    ensure
+      context.end_layout(config)
+    end
   end
   
   def to_s_inner(prec)

@@ -34,6 +34,36 @@ module Parslet
       @str.match?(pattern)
     end
     alias match matches?
+
+    # Checks whether the current position is at the beginning of a physical
+    # line. Carriage returns without line feeds are also accepted as line
+    # endings by the line cache.
+    #
+    def beginning_of_line?
+      bytepos.zero? || ["\n", "\r"].include?(
+        @str.string.byteslice(bytepos - 1)
+      )
+    end
+
+    # Scans an anchored regular expression and returns the matched slice. The
+    # regular expression is interpreted in the same anchored way as patterns
+    # passed to StringScanner#scan.
+    #
+    def scan(pattern)
+      position = self.pos
+      matched = @str.scan(pattern)
+      return nil unless matched
+
+      Parslet::Slice.new(position, matched, @line_cache)
+    end
+
+    def check(pattern)
+      position = self.pos
+      matched = @str.check(pattern)
+      return nil unless matched
+
+      Parslet::Slice.new(position, matched, @line_cache)
+    end
     
     # Consumes n characters from the input, returning them as a slice of the
     # input. 

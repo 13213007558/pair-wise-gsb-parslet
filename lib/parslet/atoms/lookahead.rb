@@ -26,6 +26,7 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
   def try(source, context, consume_all)
     rewind_pos  = source.bytepos
     error_pos   = source.pos
+    layout      = context.layout_checkpoint
 
     success, _ = bound_parslet.apply(source, context, consume_all)
     
@@ -41,6 +42,7 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
   # Lookaheads NEVER consume their input, even on success, that's why. 
   ensure 
     source.bytepos = rewind_pos
+    context.restore_layout(layout)
   end
   
   precedence LOOKAHEAD

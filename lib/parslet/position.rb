@@ -18,4 +18,8 @@ class Parslet::Position
   def <=> b
     self.bytepos <=> b.bytepos
   end
+
+  def +(byte_offset)
+    self.class.new(@string, bytepos + byte_offset)
+  end
 end

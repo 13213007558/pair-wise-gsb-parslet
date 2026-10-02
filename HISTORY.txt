@@ -6,6 +6,10 @@
 
   + Specification for mixing parslet parsers (Artur Komarov).
 
+  + Composable layout atoms (`layout.indent`, `layout.same`, and
+    `layout.dedent`) for indentation-sensitive grammars, with configurable
+    tab handling and state rollback across alternatives and lookahead.
+
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).
     Also includes testing on newer Ruby versions. 
 

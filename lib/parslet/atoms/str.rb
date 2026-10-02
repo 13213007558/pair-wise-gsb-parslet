@@ -34,9 +34,12 @@ class Parslet::Atoms::Str < Parslet::Atoms::Base
       self, source, 
       [error_msgs[:failed], source.consume(@len)], error_pos) 
   end
+
+  def consumes_layout_content?
+    true
+  end
   
   def to_s_inner(prec)
     "'#{str}'"
   end
 end
-

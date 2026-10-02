@@ -51,6 +51,31 @@ SYNOPSIS
   # and then
   Smalltalk.new.parse('smalltalk')
 
+LAYOUT-SENSITIVE GRAMMARS
+
+  Parslet can track indentation without a manually maintained global stack.
+  Configure the tab policy once, then compose layout atoms with the rest of
+  your grammar:
+
+    class BlockLanguage < Parslet::Parser
+      layout(tab_width: 4, tab_policy: :consistent)
+      root(:node)
+
+      rule(:node) do
+        str('item') >> (
+          layout.indent >> layout.same >> str('child') >> layout.dedent
+        ).maybe
+      end
+    end
+
+  `layout.indent` moves to a more deeply indented nonblank line, `layout.same`
+  confirms the current level, and `layout.dedent` moves back to an enclosing
+  level. Blank lines are skipped and do not establish a level. Alternatives
+  and lookahead restore both input position and layout state, so retries see
+  the same state as an independent parse. Tab policies include `:spaces`,
+  `:tabs`, `:consistent`, and `:mixed`; invalid indentation reports its line
+  and column.
+
 FEATURES
 
   * Tools for every part of the parser chain

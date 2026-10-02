@@ -82,11 +82,13 @@ class Parslet::Atoms::Base
   #   all input by itself.
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
+    old_layout = context.layout_checkpoint
     
     success, _ = result = context.try_with_cache(self, source, consume_all)
 
     if success
       # Notify context
+      context.layout_content_consumed(self, source, old_pos)
       context.succ(source)
       # If a consume_all parse was made and doesn't result in the consumption
       # of all the input, that is considered an error. 
@@ -97,6 +99,7 @@ class Parslet::Atoms::Base
         
         # Rewind input (as happens always in error case)
         source.bytepos  = old_pos
+        context.restore_layout(old_layout)
         
         return context.err_at(
           self, 
@@ -112,6 +115,7 @@ class Parslet::Atoms::Base
     
     # We only reach this point if the parse has failed. Rewind the input.
     source.bytepos = old_pos
+    context.restore_layout(old_layout)
     return result
   end
   
@@ -121,6 +125,10 @@ class Parslet::Atoms::Base
   def try(source, context, consume_all)
     raise NotImplementedError, \
       "Atoms::Base doesn't have behaviour, please implement #try(source, context)."
+  end
+
+  def consumes_layout_content?
+    false
   end
 
   # Returns true if this atom can be cached in the packrat cache. Most parslet
