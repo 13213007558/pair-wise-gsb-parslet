@@ -55,6 +55,10 @@ module Parslet
       @str.rest_size
     end
 
+    def rest
+      @str.rest
+    end
+
     # Returns how many chars there are between current position and the 
     # string given. If the string given doesn't occur in the source, then 
     # the remaining chars (#chars_left) are returned. 

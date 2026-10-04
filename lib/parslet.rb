@@ -45,7 +45,14 @@
 # all the details of what went wrong, including a detailed error trace that 
 # can be printed out as an ascii tree. ({Parslet::Cause})
 #
+require 'rbconfig'
+
 module Parslet
+  module Unicode
+    NORMALIZATION_FORMS = [:nfc, :nfd].freeze
+    VERSION = RbConfig::CONFIG['UNICODE_VERSION']
+  end
+
   # Extends classes that include Parslet with the module
   # {Parslet::ClassMethods}.
   #
@@ -148,15 +155,42 @@ module Parslet
   
   # Returns an atom matching the +str+ given:
   #
-  #   str('class')      # will match 'class' 
+  #   str('class')      # will match 'class'
   #
   # @param str [String] string to match verbatim
   # @return [Parslet::Atoms::Str] a parslet atom
   # 
-  def str(str)
-    Atoms::Str.new(str)
+  def str(str, form=nil, casefold=false)
+    if form.is_a?(Hash)
+      Atoms::Canonical.new(str, form)
+    elsif casefold.is_a?(Hash)
+      Atoms::Canonical.new(str, form || :nfc, casefold)
+    elsif form || casefold
+      Atoms::Canonical.new(str, form || :nfc, casefold)
+    else
+      Atoms::Str.new(str)
+    end
   end
   module_function :str
+
+  # Returns an atom matching a string under Unicode canonical equivalence.
+  #
+  # Pass a hash such as <code>{ form: :nfd, casefold: true }</code> to the
+  # second argument of #str to use this atom through the familiar constructor.
+  #
+  def canonical(str, form=:nfc, casefold=false)
+    return Atoms::Canonical.new(str, form) if form.is_a?(Hash)
+    return Atoms::Canonical.new(str, :nfc, casefold) if casefold.is_a?(Hash)
+    Atoms::Canonical.new(str, form, casefold)
+  end
+  module_function :canonical
+
+  def canonical_str(str, form=:nfc, casefold=false)
+    return Atoms::Canonical.new(str, form) if form.is_a?(Hash)
+    return Atoms::Canonical.new(str, :nfc, casefold) if casefold.is_a?(Hash)
+    Atoms::Canonical.new(str, form, casefold)
+  end
+  module_function :canonical_str
   
   # Returns an atom matching any character. It acts like the '.' (dot)
   # character in regular expressions.

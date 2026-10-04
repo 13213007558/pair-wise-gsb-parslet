@@ -40,6 +40,10 @@ class Parslet::Slice
     @position.charpos
   end
 
+  def byte_range
+    @position.bytepos...(@position.bytepos + str.bytesize)
+  end
+
   # Compares slices to other slices or strings.
   #
   def == other

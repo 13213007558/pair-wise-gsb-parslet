@@ -26,6 +26,8 @@ module Parslet::Atoms
   require 'parslet/atoms/repetition'
   require 'parslet/atoms/re'
   require 'parslet/atoms/str'
+  require 'parslet/atoms/canonical'
+  CanonicalStr = Canonical
   require 'parslet/atoms/entity'
   require 'parslet/atoms/capture'
   require 'parslet/atoms/dynamic'
