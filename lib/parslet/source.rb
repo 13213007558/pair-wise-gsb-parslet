@@ -55,6 +55,14 @@ module Parslet
       @str.rest_size
     end
 
+    # Returns the remaining input as a string, starting at the current
+    # position. This is a read-only view: the position of the source is 
+    # not modified by calling this method. 
+    #
+    def rest
+      @str.rest
+    end
+
     # Returns how many chars there are between current position and the 
     # string given. If the string given doesn't occur in the source, then 
     # the remaining chars (#chars_left) are returned. 

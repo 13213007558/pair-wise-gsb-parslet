@@ -157,6 +157,26 @@ module Parslet
     Atoms::Str.new(str)
   end
   module_function :str
+
+  # Returns an atom matching the +str+ given up to Unicode canonical
+  # equivalence:
+  #
+  #   unicode_str('café')                     # also matches 'café'
+  #   unicode_str('straße', case_fold: true)  # also matches 'STRASSE'
+  #
+  # The atom consumes whole normalization units only and never modifies 
+  # the input: captured results are slices of the original input. See 
+  # Parslet::Atoms::UnicodeStr.
+  #
+  # @param str [String] string to match, modulo canonical equivalence
+  # @param form [Symbol] normalization form of the atom (:nfc or :nfd)
+  # @param case_fold [Boolean] apply full case folding when comparing
+  # @return [Parslet::Atoms::UnicodeStr] a parslet atom
+  #
+  def unicode_str(str, form: :nfc, case_fold: false)
+    Atoms::UnicodeStr.new(str, form: form, case_fold: case_fold)
+  end
+  module_function :unicode_str
   
   # Returns an atom matching any character. It acts like the '.' (dot)
   # character in regular expressions.
