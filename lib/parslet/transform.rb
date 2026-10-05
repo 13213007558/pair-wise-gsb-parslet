@@ -137,6 +137,10 @@ class Parslet::Transform
     def inherited(subclass)
       super
       subclass.instance_variable_set(:@__transform_rules, rules.dup)
+      subclass.instance_variable_set(
+        :@attribute_definitions,
+        attribute_definitions.duplicate
+      )
     end
   end
   
@@ -263,3 +267,4 @@ class Parslet::Transform
 end
 
 require 'parslet/context'
+require 'parslet/transform/attributes'
