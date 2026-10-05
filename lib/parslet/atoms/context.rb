@@ -87,6 +87,18 @@ module Parslet::Atoms
     ensure
       captures.pop
     end
+
+    # Starts a new capture scope that is detached from the current one.
+    # Captures made outside the block are not visible inside of it and
+    # captures made inside are discarded when the block ends. This is the
+    # instance boundary used by Parslet::GrammarModule.
+    #
+    def isolated_scope
+      captures.push_isolated
+      yield
+    ensure
+      captures.pop
+    end
     
   private 
     # NOTE These methods use #object_id directly, since that seems to bring the

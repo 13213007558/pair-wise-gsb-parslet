@@ -42,4 +42,29 @@ describe Parslet::Scope do
       end
     end
   end
+
+  describe 'isolated scoping' do
+    before(:each) { scope[:depth] = 1 }
+    before(:each) { scope.push_isolated }
+
+    it 'does not see outer bindings' do
+      expect {
+        scope[:depth]
+      }.to raise_error(Parslet::Scope::NotFound)
+    end
+
+    it 'stores and retrieves its own bindings' do
+      scope[:depth] = 2
+      scope[:depth].should == 2
+    end
+
+    describe 'after a pop' do
+      before(:each) { scope[:depth] = 2 }
+      before(:each) { scope.pop }
+
+      it 'restores the outer scope' do
+        scope[:depth].should == 1
+      end
+    end
+  end
 end

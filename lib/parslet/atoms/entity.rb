@@ -10,6 +10,13 @@
 #
 class Parslet::Atoms::Entity < Parslet::Atoms::Base
   attr_reader :name, :block
+
+  # Instance path of the grammar module instance this entity belongs to
+  # (if any). Used to qualify the rule name in error output, so that two
+  # instances of the same module remain distinguishable.
+  #
+  attr_accessor :path
+
   def initialize(name, label=nil, &block)
     super()
     
@@ -17,6 +24,7 @@ class Parslet::Atoms::Entity < Parslet::Atoms::Base
     @label = label
     @block = block
     @parslet = nil
+    @path = nil
   end
 
   def try(source, context, consume_all)
@@ -32,7 +40,11 @@ class Parslet::Atoms::Entity < Parslet::Atoms::Base
   end
 
   def to_s_inner(prec)
-    name.to_s.upcase
+    if path
+      [path, name].join('.').upcase
+    else
+      name.to_s.upcase
+    end
   end  
 private 
   def raise_not_implemented

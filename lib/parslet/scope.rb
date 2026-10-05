@@ -31,12 +31,24 @@ class Parslet::Scope
   
   def initialize
     @current = Binding.new
+    @stack = []
   end
   
   def push
+    @stack.push(@current)
     @current = Binding.new(@current)
   end
+
+  # Pushes a scope that is detached from the current one: lookups inside the
+  # new scope will NOT fall back to bindings made outside of it. Used to
+  # isolate grammar module instances from their surrounding grammar.
+  #
+  def push_isolated
+    @stack.push(@current)
+    @current = Binding.new
+  end
+
   def pop
-    @current = @current.parent
+    @current = @stack.pop
   end
 end
