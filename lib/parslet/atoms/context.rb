@@ -87,6 +87,21 @@ module Parslet::Atoms
     ensure
       captures.pop
     end
+
+    # Starts a fully isolated capture scope. Unlike #scope, the captures of
+    # the surrounding parse are not visible inside the block, and captures
+    # made inside the block are discarded when the block ends. This is used
+    # to implement grammar module instance boundaries (see
+    # Parslet::GrammarModule): captures and dynamic rules inside a module
+    # instance only ever see the bindings of that instance.
+    #
+    def isolate
+      previous_captures = @captures
+      @captures = Parslet::Scope.new
+      yield
+    ensure
+      @captures = previous_captures
+    end
     
   private 
     # NOTE These methods use #object_id directly, since that seems to bring the

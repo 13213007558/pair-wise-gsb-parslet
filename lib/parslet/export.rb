@@ -121,7 +121,7 @@ class Parslet::Parser
     # there is collision, we will not detect it for now. 
     #
     def mangle_name(str)
-      str.to_s.sub(/\?$/, '_p')
+      str.to_s.sub(/\?$/, '_p').gsub(/[^a-zA-Z0-9_]/, '_')
     end
   end
 

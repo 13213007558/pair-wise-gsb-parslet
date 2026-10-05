@@ -1,0 +1,4 @@
+{:ints=>[{:element=>"1"@0}, {:element=>"2"@2}, {:element=>"3"@4}],
+ :words=>[{:element=>"a"@6}, {:element=>"b"@8}, {:element=>"c"@10}]}
+Failed to match sequence (ints:INT_LIST ignored(' ') words:WORD_LIST) at line 1 char 2.
+`- Expected " ", but got "," at line 1 char 2.
