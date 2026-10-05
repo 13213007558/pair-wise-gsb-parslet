@@ -82,6 +82,7 @@ class Parslet::Atoms::Base
   #   all input by itself.
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
+    context.push_frame(old_pos, self) if context.tracking?
     
     success, _ = result = context.try_with_cache(self, source, consume_all)
 
@@ -113,6 +114,8 @@ class Parslet::Atoms::Base
     # We only reach this point if the parse has failed. Rewind the input.
     source.bytepos = old_pos
     return result
+  ensure
+    context.pop_frame if context.tracking?
   end
   
   # Override this in your Atoms::Base subclasses to implement parsing
@@ -128,6 +131,34 @@ class Parslet::Atoms::Base
   #
   def cached?
     true
+  end
+
+  # Streaming support (see Parslet::Session): whether this atom may
+  # resume reading input at its own start position after having consumed
+  # input past it. True for atoms that retry at their start position,
+  # like alternatives and lookaheads.
+  #
+  def streaming_reread?
+    false
+  end
+
+  # Streaming support (see Parslet::Session): whether the start positions
+  # of this atom's children may be read again after the children fail.
+  # True for repetition, whose parent continues matching where a failed
+  # iteration started.
+  #
+  def streaming_reread_children?
+    false
+  end
+
+  # Creates an incremental parse session for this atom. See
+  # Parslet::Session for the full documentation.
+  #
+  #   session = parser.session
+  #   session.feed('chunk')
+  #
+  def session(options={})
+    Parslet::Session.new(self, options)
   end
 
   # Debug printing - in Treetop syntax. 

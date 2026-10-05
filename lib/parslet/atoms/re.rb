@@ -24,7 +24,13 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
-    return succ(source.consume(1)) if source.matches?(@re)
+    loop do
+      return succ(source.consume(1)) if source.matches?(@re)
+
+      # No input available at all; on a streaming source, wait for more
+      # of it (and retry) instead of failing.
+      break unless source.wait_for_input?(1)
+    end
     
     # No string could be read
     return context.err(self, source, error_msgs[:premature]) \
@@ -38,4 +44,3 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
     match.inspect[1..-2]
   end
 end
-

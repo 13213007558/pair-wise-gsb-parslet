@@ -22,7 +22,13 @@ class Parslet::Atoms::Str < Parslet::Atoms::Base
   end
   
   def try(source, context, consume_all)
-    return succ(source.consume(@len)) if source.matches?(@pat)
+    loop do
+      return succ(source.consume(@len)) if source.matches?(@pat)
+
+      # The input might just be too short to decide; on a streaming
+      # source, wait for more of it (and retry) instead of failing.
+      break unless source.wait_for_input?(@len, @str)
+    end
     
     # Input ending early:
     return context.err(self, source, error_msgs[:premature]) \
@@ -39,4 +45,3 @@ class Parslet::Atoms::Str < Parslet::Atoms::Base
     "'#{str}'"
   end
 end
-

@@ -49,4 +49,11 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
 
     "#{@char}#{bound_parslet.to_s(prec)}"
   end
+
+  # Lookaheads rewind to their start position; the surrounding parse
+  # reads from there again.
+  #
+  def streaming_reread?
+    true
+  end
 end

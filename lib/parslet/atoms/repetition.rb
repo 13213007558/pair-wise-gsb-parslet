@@ -83,5 +83,11 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
 
     parslet.to_s(prec) + minmax
   end
-end
 
+  # When an iteration fails, the surrounding parse continues where that
+  # iteration started.
+  #
+  def streaming_reread_children?
+    true
+  end
+end

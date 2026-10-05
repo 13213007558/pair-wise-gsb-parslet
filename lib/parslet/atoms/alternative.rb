@@ -50,4 +50,11 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   def to_s_inner(prec)
     alternatives.map { |a| a.to_s(prec) }.join(' / ')
   end
+
+  # Alternatives retry matching at their start position when an
+  # alternative fails.
+  #
+  def streaming_reread?
+    true
+  end
 end

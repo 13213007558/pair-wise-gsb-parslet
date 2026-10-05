@@ -13,6 +13,53 @@ module Parslet::Atoms
       @cache = Hash.new { |h, k| h[k] = {} }
       @reporter = reporter
       @captures = Parslet::Scope.new
+      @frames = nil
+    end
+
+    # Enables tracking of parse frames (atom applications). Used by
+    # Parslet::Session to compute how much input must be retained for
+    # backtracking. Off by default.
+    #
+    def track_frames!
+      @frames = []
+    end
+
+    def tracking?
+      !@frames.nil?
+    end
+
+    # Called by Parslet::Atoms::Base#apply when frame tracking is
+    # enabled: records that +atom+ started matching at +bytepos+.
+    #
+    def push_frame(bytepos, atom)
+      @frames << [bytepos, atom]
+    end
+
+    def pop_frame
+      @frames.pop
+    end
+
+    # The smallest byte position the currently suspended parse may still
+    # rewind to and read from, or nil if there is no such position (the
+    # parse can then only continue at or after the read head).
+    #
+    def rewind_horizon
+      return nil unless @frames
+
+      horizon = nil
+      @frames.each_with_index do |(pos, atom), idx|
+        rereads = atom.streaming_reread?
+        rereads ||= idx > 0 && @frames[idx-1][1].streaming_reread_children?
+        horizon = pos if rereads && (horizon.nil? || pos < horizon)
+      end
+      horizon
+    end
+
+    # Drops all packrat cache entries for positions before +bytepos+;
+    # those positions will never be parsed at again.
+    #
+    def prune_before(bytepos)
+      @cache.delete_if { |pos, _| pos < bytepos }
     end
     
     # Caches a parse answer for obj at source.pos. Applying the same parslet

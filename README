@@ -51,9 +51,22 @@ SYNOPSIS
   # and then
   Smalltalk.new.parse('smalltalk')
 
+  # parsers can also consume input incrementally, chunk by chunk
+  session = Smalltalk.new.session
+  session.feed('small')     # => :waiting (more input needed)
+  session.feed('talk')      # => :waiting
+  session.finish            # => :success (or :failure)
+  session.result            # parse result, same as #parse
+
+  # While the stream is open, the parser waits instead of failing on
+  # premature input end: str('ab') | str('a') fed a lone 'a' does not
+  # commit to the short branch yet. Input the parser can never backtrack
+  # to is released; session.retained_bytes reports what is kept.
+
 FEATURES
 
   * Tools for every part of the parser chain
+  * Incremental parsing of chunked input (streams)
   * Transformers generate Abstract Syntax Trees
   * Accelerators transform parsers, making them quite a bit faster
   * Pluggable error reporters

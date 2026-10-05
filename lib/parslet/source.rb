@@ -92,5 +92,13 @@ module Parslet
     def line_and_column(position=nil)
       @line_cache.line_and_column(position || self.bytepos)
     end
+
+    # A plain source is always complete: there is never more input to
+    # wait for. Parslet::StreamingSource overrides this to let atoms
+    # block until more input has been fed.
+    #
+    def wait_for_input?(needed=1, literal=nil)
+      false
+    end
   end
 end

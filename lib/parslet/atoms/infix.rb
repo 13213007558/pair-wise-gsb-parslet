@@ -112,4 +112,11 @@ class Parslet::Atoms::Infix < Parslet::Atoms::Base
     ops = @operations.map { |o, _, _| o.inspect }.join(', ')
     "infix_expression(#{@element.inspect}, [#{ops}])"
   end
+
+  # Infix expressions rewind to earlier operator positions; the
+  # surrounding parse may read from there again.
+  #
+  def streaming_reread?
+    true
+  end
 end
