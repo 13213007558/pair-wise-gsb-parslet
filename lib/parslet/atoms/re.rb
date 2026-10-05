@@ -24,18 +24,21 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
-    return succ(source.consume(1)) if source.matches?(@re)
-    
-    # No string could be read
-    return context.err(self, source, error_msgs[:premature]) \
+    loop do
+      return succ(source.consume(1)) if source.matches?(@re)
       if source.chars_left < 1
-        
-    # No match
-    return context.err(self, source, error_msgs[:failed])
+        if !source.finished? && (source.bytes_left == 0 || source.pending_character?)
+          source.wait_at(source.bytepos, source.rollback_positions.empty?)
+          next
+        end
+        return context.err(self, source, error_msgs[:premature])
+      else
+        return context.err(self, source, error_msgs[:failed])
+      end
+    end
   end
 
   def to_s_inner(prec)
     match.inspect[1..-2]
   end
 end
-

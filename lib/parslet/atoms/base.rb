@@ -62,6 +62,20 @@ class Parslet::Atoms::Base
     
     return flatten(value)
   end
+
+  def parse_session(reporter=nil)
+    Parslet::ParseSession.new(self, reporter)
+  end
+
+  def parse_io(io, options={})
+    session = parse_session(options[:reporter])
+    while (chunk = io.read(options[:chunk_size] || 4096))
+      session.feed(chunk)
+    end
+    session.finish
+    raise session.failure if session.failure?
+    session.result
+  end
   
   # Creates a context for parsing and applies the current atom to the input. 
   # Returns the parse result. 
@@ -82,37 +96,53 @@ class Parslet::Atoms::Base
   #   all input by itself.
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
-    
-    success, _ = result = context.try_with_cache(self, source, consume_all)
 
-    if success
-      # Notify context
-      context.succ(source)
-      # If a consume_all parse was made and doesn't result in the consumption
-      # of all the input, that is considered an error. 
-      if consume_all && source.chars_left>0
-        # Read 10 characters ahead. Why ten? I don't know. 
-        offending_pos   = source.pos
-        offending_input = source.consume(10)
+    loop do
+      old_pos = source.bytepos
+      resume_commit = source.respond_to?(:resume_commit?) && source.resume_commit?
+      success, _ = result = context.try_with_cache(self, source, consume_all)
+
+      if success
+        # Notify context
+        context.succ(source)
+        # If a consume_all parse was made and doesn't result in the consumption
+        # of all the input, that is considered an error. 
+        if !source.finished? && !resume_commit
+          source.wait_at(old_pos, false)
+          next
+        elsif !source.finished? && consume_all && source.bytes_left == 0
+          source.wait_at(source.bytepos, source.consume_all_commit?)
+          next
+        elsif source.finished? && resume_commit && source.bytes_left > 0
+          source.bytepos = old_pos
+          source.reset_resume_commit!
+          next
+        end
+
+        if consume_all && source.bytes_left > 0
+          # Read 10 characters ahead. Why ten? I don't know. 
+          offending_pos   = source.pos
+          offending_input = source.consume(10)
+          
+          # Rewind input (as happens always in error case)
+          source.bytepos  = old_pos
+          
+          return context.err_at(
+            self, 
+            source, 
+            "Don't know what to do with #{offending_input.to_s.inspect}", 
+            offending_pos
+          ) 
+        end
         
-        # Rewind input (as happens always in error case)
-        source.bytepos  = old_pos
-        
-        return context.err_at(
-          self, 
-          source, 
-          "Don't know what to do with #{offending_input.to_s.inspect}", 
-          offending_pos
-        ) 
+        # Looks like the parse was successful after all. Don't rewind the input.
+        return result
       end
       
-      # Looks like the parse was successful after all. Don't rewind the input.
+      # We only reach this point if the parse has failed. Rewind the input. 
+      source.bytepos = old_pos
       return result
     end
-    
-    # We only reach this point if the parse has failed. Rewind the input.
-    source.bytepos = old_pos
-    return result
   end
   
   # Override this in your Atoms::Base subclasses to implement parsing

@@ -1,4 +1,3 @@
-
 require 'stringio'
 require 'strscan'
 
@@ -6,91 +5,249 @@ require 'parslet/position'
 require 'parslet/source/line_cache'
 
 module Parslet
-  # Wraps the input string for parslet. 
-  #
   class Source
-    def initialize(str)
-      raise(
-        ArgumentError, 
-        "Must construct Source with a string like object."
-      ) unless str.respond_to?(:to_str)
+  attr_reader :base_bytepos, :rollback_positions
 
-      @str = StringScanner.new(str)
+    def initialize(str, finished: true)
+      unless str.respond_to?(:to_str)
+        raise ArgumentError, 'Must construct Source with a string like object.'
+      end
 
-      # maps 1 => /./m, 2 => /../m, etc...
-      @re_cache = Hash.new { |h,k| 
-        h[k] = /(.|$){#{k}}/m }
+      input = str.to_str
+      @encoding = input.encoding
+      @buffer = String.new(encoding: Encoding::BINARY)
+      @base_bytepos = 0
+      @base_charpos = 0
+    @finished = false
+    @rollback_positions = []
+      @pause_pos = 0
+      @on_release = nil
+      @input = input
 
+      append_buffer(input)
+      @finished = finished
+      rebuild_scanner
+
+      @re_cache = Hash.new { |cache, size| cache[size] = /(.|$){#{size}}/m }
       @line_cache = LineCache.new
-      @line_cache.scan_for_line_endings(0, str)
+      @line_cache.scan_for_line_endings(0, @scannable)
     end
-  
-    # Checks if the given pattern matches at the current input position. 
-    #
-    # @param pattern [Regexp] pattern to check for
-    # @return [Boolean] true if the pattern matches at #pos
-    #
+
     def matches?(pattern)
       @str.match?(pattern)
     end
     alias match matches?
-    
-    # Consumes n characters from the input, returning them as a slice of the
-    # input. 
-    #
-    def consume(n)
-      position = self.pos
-      slice_str = @str.scan(@re_cache[n])
-      slice = Parslet::Slice.new(
-        position, 
-        slice_str,
-        @line_cache)
 
-      return slice
+    def consume(char_count)
+      position = pos
+      consumed = @str.scan(@re_cache[char_count])
+      Slice.new(position, consumed, @line_cache)
     end
-    
-    # Returns how many chars remain in the input. 
-    #
+
     def chars_left
       @str.rest_size
     end
 
-    # Returns how many chars there are between current position and the 
-    # string given. If the string given doesn't occur in the source, then 
-    # the remaining chars (#chars_left) are returned. 
-    #
-    # @return [Fixnum] count of chars until str or #chars_left
-    #
-    def chars_until str
-      slice_str = @str.check_until(Regexp.new(Regexp.escape(str)))
-      return chars_left unless slice_str
-      return slice_str.size - str.size
-    end
-    
-    # Position of the parse as a character offset into the original string. 
-    #
-    # @note Please be aware of encodings at this point. 
-    #
-    def pos
-      Position.new(@str.string, @str.pos)
-    end
-    def bytepos
-      @str.pos
+    def bytes_left
+      @str.rest.bytesize + pending_bytesize
     end
 
-    # @note Please be aware of encodings at this point. 
-    #
-    def bytepos=(n)
-      @str.pos = n
+    def bytesize
+      @base_bytepos + @buffer.bytesize
+    end
+
+    def finished?
+      @finished
+    end
+
+    def append(chunk)
+      raise ArgumentError, 'Cannot append to a finished source.' if @finished
+
+      old_scannable_bytesize = @scannable.bytesize
+      append_buffer(chunk)
+      rebuild_scanner
+      scan_new_line_endings(old_scannable_bytesize)
+    end
+
+    def finish
+      return if @finished
+
+      old_scannable_bytesize = @scannable.bytesize
+      @finished = true
+      rebuild_scanner
+      scan_new_line_endings(old_scannable_bytesize)
+    end
+
+  def with_rollback(position=bytepos)
+    @rollback_positions.push(position)
+    yield
+  ensure
+    @rollback_positions.pop
+  end
+
+  def wait_at(position, commit)
+    @pause_pos = position
+    @pause_commit_pos = commit ? bytepos : position
+    @resume_commit = commit
+    Fiber.yield
+  end
+
+  def pause_pos
+    @pause_pos
+  end
+
+  def pause_commit_pos
+    @pause_commit_pos || @pause_pos
+  end
+
+  def speculative?
+    !@rollback_positions.empty?
+  end
+
+  def consume_all_commit?
+    @rollback_positions.empty?
+  end
+
+  def reset_resume_commit!
+    @resume_commit = false
+  end
+
+  def wait
+    @pause_pos = @rollback_positions.empty? ? bytepos : @rollback_positions.min
+    @pause_commit_pos = @pause_pos
+    @resume_commit = @rollback_positions.empty?
+    Fiber.yield
+  end
+
+  def resume_commit?
+    @resume_commit
+  end
+
+    def possible_string_prefix?(string)
+      return false if @finished
+
+      available = @buffer.byteslice(scanner_bytepos, string.bytesize)
+      available && string.b.start_with?(available)
+    end
+
+    def pending_character?
+      return false if @finished
+
+      pending = @buffer.byteslice(scanner_bytepos, 4) or return false
+      bytes = pending.bytes
+      first = bytes.first or return false
+      expected = expected_utf8_size(first)
+      return false unless expected
+
+      bytes.size < expected &&
+        bytes[1..-1].to_a.all? { |byte| continuation_byte?(byte) }
+    end
+
+    def on_release(&block)
+      @on_release = block
+    end
+
+    def release_before(position)
+      return 0 if position <= @base_bytepos
+
+      relative_position = position - @base_bytepos
+      released = @scannable.byteslice(0, relative_position)
+      scanner_pos = @str.pos
+
+      @buffer = @buffer.byteslice(released.bytesize, @buffer.bytesize) ||
+        String.new(encoding: Encoding::BINARY)
+      @base_bytepos += released.bytesize
+      @base_charpos += released.size
+      rebuild_scanner(scanner_pos - released.bytesize)
+      @on_release.call(@base_bytepos) if @on_release
+
+      released.bytesize
+    end
+
+    def chars_until(str)
+      found = @str.check_until(Regexp.new(Regexp.escape(str)))
+      return chars_left unless found
+      found.size - str.size
+    end
+
+    def pos
+      char_offset =
+        if @input
+          @input.byteslice(0, bytepos).size
+        else
+          @base_charpos + @str.pre_match.to_s.size
+        end
+      Position.char(char_offset, bytepos)
+    end
+
+    def bytepos
+      @base_bytepos + @str.pos
+    end
+
+    def bytepos=(position)
+      @str.pos = position - @base_bytepos
     rescue RangeError
     end
 
-    # Returns a <line, column> tuple for the given position. If no position is
-    # given, line/column information is returned for the current position
-    # given by #pos. 
-    #
     def line_and_column(position=nil)
-      @line_cache.line_and_column(position || self.bytepos)
+      @line_cache.line_and_column(position || bytepos)
+    end
+
+  private
+
+    def append_buffer(chunk)
+      @buffer << chunk.to_str.b
+    end
+
+    def rebuild_scanner(position=0)
+      @scannable = scannable_prefix.dup.force_encoding(@encoding)
+      @str = StringScanner.new(@scannable)
+      @str.pos = [[position, 0].max, @scannable.bytesize].min
+    end
+
+    def scannable_prefix
+      return @buffer if @finished
+      @buffer.byteslice(0, utf8_boundary(@buffer.bytes)) ||
+        String.new(encoding: Encoding::BINARY)
+    end
+
+    def utf8_boundary(bytes)
+      1.upto([4, bytes.size].min) do |size|
+        offset = bytes.size - size
+        expected = expected_utf8_size(bytes[offset])
+        next unless expected
+
+        return offset if expected > size &&
+          bytes[(offset + 1)...bytes.size].to_a.all? { |byte| continuation_byte?(byte) }
+        return bytes.size if expected <= size
+      end
+
+      bytes.size
+    end
+
+    def expected_utf8_size(byte)
+      if byte.between?(0xC2, 0xDF) then 2
+      elsif byte.between?(0xE0, 0xEF) then 3
+      elsif byte.between?(0xF0, 0xF4) then 4
+      end
+    end
+
+    def continuation_byte?(byte)
+      byte.between?(0x80, 0xBF)
+    end
+
+    def pending_bytesize
+      @buffer.bytesize - @str.pos - @str.rest.bytesize
+    end
+
+    def scanner_bytepos
+      @base_bytepos + @str.pos
+    end
+
+    def scan_new_line_endings(old_scannable_bytesize)
+      new_part = @scannable.byteslice(old_scannable_bytesize, @scannable.bytesize)
+      @line_cache.scan_for_line_endings(
+        @base_bytepos + old_scannable_bytesize, new_part)
     end
   end
 end

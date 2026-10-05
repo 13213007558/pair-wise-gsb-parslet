@@ -13,6 +13,7 @@ module Parslet::Atoms
       @cache = Hash.new { |h, k| h[k] = {} }
       @reporter = reporter
       @captures = Parslet::Scope.new
+      @cache_failures = !reporter.nil? && !reporter.is_a?(Parslet::ErrorReporter::Tree)
     end
     
     # Caches a parse answer for obj at source.pos. Applying the same parslet
@@ -25,12 +26,12 @@ module Parslet::Atoms
     #
     def try_with_cache(obj, source, consume_all)
       beg = source.bytepos
-        
-      # Not in cache yet? Return early.
       unless entry = lookup(obj, beg)
         result = obj.try(source, self, consume_all)
     
-        if obj.cached?
+        success = result.first
+        cacheable = success ? obj.cached? : (@cache_failures && obj.cached?)
+        if cacheable
           set obj, beg, [result, source.bytepos-beg]
         end
         
@@ -39,13 +40,15 @@ module Parslet::Atoms
 
       # the condition in unless has returned true, so entry is not nil.
       result, advance = entry
-
-      # The data we're skipping here has been read before. (since it is in 
-      # the cache) PLUS the actual contents are not interesting anymore since
-      # we know obj matches at beg. So skip reading.
       source.bytepos = beg + advance
       return result
     end  
+
+    def release_before(position)
+      @cache.keys.each do |pos|
+        @cache.delete(pos) if pos < position
+      end
+    end
     
     # Report an error at a given position. 
     # @see ErrorReporter

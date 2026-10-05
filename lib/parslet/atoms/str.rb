@@ -22,21 +22,23 @@ class Parslet::Atoms::Str < Parslet::Atoms::Base
   end
   
   def try(source, context, consume_all)
-    return succ(source.consume(@len)) if source.matches?(@pat)
-    
-    # Input ending early:
-    return context.err(self, source, error_msgs[:premature]) \
-      if source.chars_left<@len
-    
-    # Expected something, but got something else instead:  
-    error_pos = source.pos  
-    return context.err_at(
-      self, source, 
-      [error_msgs[:failed], source.consume(@len)], error_pos) 
+    loop do
+      return succ(source.consume(@len)) if source.matches?(@pat)
+      if source.possible_string_prefix?(@str)
+        source.wait_at(source.bytepos, source.bytes_left.zero? && source.rollback_positions.empty?)
+        next
+      end
+      return context.err(self, source, error_msgs[:premature]) \
+        if source.chars_left < @len
+      
+      error_pos = source.pos  
+      return context.err_at(
+        self, source, 
+        [error_msgs[:failed], source.consume(@len)], error_pos) 
+    end
   end
   
   def to_s_inner(prec)
     "'#{str}'"
   end
 end
-

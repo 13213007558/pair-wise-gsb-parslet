@@ -35,7 +35,10 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 
   def try(source, context, consume_all)
     errors = alternatives.map { |a|
-      success, value = result = a.apply(source, context, consume_all)
+      result = source.with_rollback do
+        a.apply(source, context, consume_all)
+      end
+      success, value = result
       return result if success
       
       # Aggregate all errors

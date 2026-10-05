@@ -36,8 +36,9 @@ class Parslet::Source
     def scan_for_line_endings(start_pos, buf)
       return unless buf
 
-      buf = StringScanner.new(buf)
-      return unless buf.exist?(/\n/)
+      buf = StringScanner.new(String(buf).b)
+      newline = Regexp.new("\n".b, Regexp::FIXEDENCODING)
+      return unless buf.exist?(newline)
 
       ## If we have already read part or all of buf, we already know about
       ## line ends in that portion. remove it and correct cur (search index)
@@ -48,7 +49,7 @@ class Parslet::Source
 
       ## Scan the string for line endings; store the positions of all endings
       ## in @line_ends. 
-      while buf.skip_until(/\n/)
+      while buf.skip_until(newline)
         @last_line_end = start_pos + buf.pos
         @line_ends << @last_line_end
       end

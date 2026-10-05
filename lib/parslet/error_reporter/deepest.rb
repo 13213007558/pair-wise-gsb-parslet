@@ -82,8 +82,8 @@ module Parslet
         max_child = cause
         max_rank  = rank
         
-        if cause.children && !cause.children.empty?
-          cause.children.each do |child|
+      if cause.respond_to?(:children) && cause.children && !cause.children.empty?
+        Array(cause.children).select { |child| child.respond_to?(:children) }.each do |child|
             c_rank, c_cause = deepest_child(child, rank+1)
             
             if c_rank > max_rank

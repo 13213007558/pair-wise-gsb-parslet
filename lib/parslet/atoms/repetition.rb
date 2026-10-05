@@ -28,7 +28,7 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
       unconsumed: 'Extra input after last repetition'
     }
   end
-  
+
   def try(source, context, consume_all)
     occ = 0
     accum = [@tag]   # initialize the result array with the tag (for flattening)
@@ -38,14 +38,18 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     loop do
       success, value = parslet.apply(source, context, false)
 
-      break_on = value
-      break unless success
-
-      occ += 1
-      accum << value
-      
-      # If we're not greedy (max is defined), check if that has been reached. 
-      return succ(accum) if max && occ>=max
+      if success
+        break_on = value
+        occ += 1
+        accum << value
+        return succ(accum) if max && occ>=max
+      else
+        if !source.finished? && source.bytes_left == 0
+          source.wait
+          next
+        end
+        break
+      end
     end
     
     # Last attempt to match parslet was a failure, failure reason in break_on.
@@ -84,4 +88,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-
