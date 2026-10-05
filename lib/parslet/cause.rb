@@ -29,7 +29,11 @@ module Parslet
     def children
       @children ||= []
     end
-    
+
+    # True when this failure happened after reaching a scoped cut.
+    attr_accessor :cut
+    alias_method :cut?, :cut
+
     # Appends 'at line LINE char CHAR' to the string given. Use +pos+ to
     # override the position of the +source+. This method returns an object
     # that can be turned into a string using #to_s.

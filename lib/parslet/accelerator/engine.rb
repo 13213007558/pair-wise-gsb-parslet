@@ -12,6 +12,9 @@ module Parslet::Accelerator
     def visit_parser(root)
       false
     end
+    def visit_cut
+      false
+    end
     def visit_entity(name, block)
       false
     end

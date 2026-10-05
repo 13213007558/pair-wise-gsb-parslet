@@ -40,6 +40,9 @@ module Parslet::Accelerator
     def visit_str(str)
       transform Parslet::Atoms::Str.new(str)
     end
+    def visit_cut
+      transform Parslet::Atoms::Cut.new
+    end
 
     def transform atom
       @rules.each do |expr, action|

@@ -83,7 +83,12 @@ class Parslet::Atoms::Base
   def apply(source, context, consume_all=false)
     old_pos = source.bytepos
     
-    success, _ = result = context.try_with_cache(self, source, consume_all)
+    success, _ = result = begin
+      context.try_with_cache(self, source, consume_all)
+    rescue Parslet::CutTaken
+      source.bytepos = old_pos
+      raise
+    end
 
     if success
       # Notify context

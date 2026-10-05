@@ -61,6 +61,8 @@ module Parslet
     def visit_str(str)
       # downwards node(str.object_id, label: escape("#{str.inspect}"))
     end
+    def visit_cut
+    end
 
     def escape str
       str.gsub('"', "'")

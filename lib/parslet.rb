@@ -52,6 +52,20 @@ module Parslet
   def self.included(base)
     base.extend(ClassMethods)
   end
+
+  # Raised internally after a cut has been reached and parsing the committed
+  # alternative later fails. The nearest enclosing ordered choice catches this
+  # signal; it is never visible to parser users.
+  #
+  class CutTaken < StandardError
+    attr_reader :depth, :cause
+
+    def initialize(depth, cause=nil)
+      @depth = depth
+      @cause = cause
+      super("Cut was taken")
+    end
+  end
   
   # Raised when the parse failed to match. It contains the message that should
   # be presented to the user. More details can be extracted from the
@@ -184,6 +198,35 @@ module Parslet
     Parslet::Atoms::Scope.new(block)
   end
   module_function :scope
+
+  # Returns a zero-width atom that commits the nearest enclosing ordered
+  # choice. Once that alternative has reached the cut, later failures do not
+  # cause remaining alternatives to be tried.
+  #
+  # Cuts are scoped: a cut inside a nested choice does not prevent choices
+  # outside that nested choice from recovering.
+  # Repetition and lookahead do not move that scope: a cut still commits the
+  # nearest enclosing choice, while a cut reached only inside a lookahead is
+  # discarded with the speculative parse. Packrat memoization is also scoped,
+  # so replaying a cached parse cannot commit a different choice.
+  #
+  # If parsing fails after the cut, the reported failure keeps the position of
+  # the real failure rather than the entrance of the ordered choice.
+  #
+  # Example:
+  #   rule(:increment) { str('inc') >> cut >> name }
+  #   rule(:command)   { increment | decrement }
+  #
+  def cut
+    Atoms::Cut.new
+  end
+  module_function :cut
+
+  # Alias for {Parslet.cut}.
+  def commit
+    cut
+  end
+  module_function :commit
   
   # Designates a piece of the parser as being dynamic. Dynamic parsers can
   # either return a parser at runtime, which will be applied on the input, or

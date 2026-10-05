@@ -17,6 +17,9 @@ class Parslet::Parser
       def visit_re(match)
         match.to_s
       end
+      def visit_cut
+        'cut'
+      end
 
       def visit_entity(name, block)
         context.deferred(name, block)
@@ -159,4 +162,3 @@ class Parslet::Parser
       pretty_print(self.class.name, root)
   end
 end
-

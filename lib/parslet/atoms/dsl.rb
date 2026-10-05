@@ -10,6 +10,12 @@
 #   any.absent?               # also called The Epsilon
 #
 module Parslet::Atoms::DSL
+  # Returns a zero-width cut atom. See Parslet.cut for its semantics.
+  def cut
+    Parslet::Atoms::Cut.new
+  end
+  alias_method :commit, :cut
+
   # Construct a new atom that repeats the current atom min times at least and
   # at most max times. max can be nil to indicate that no maximum is present. 
   #

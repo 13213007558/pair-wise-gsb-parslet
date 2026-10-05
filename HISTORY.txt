@@ -9,6 +9,9 @@
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).
     Also includes testing on newer Ruby versions. 
 
+  + Scoped `cut`/`commit` atoms prevent backtracking within a selected ordered
+    choice while allowing outer choices to recover.
+
 
 = 2.0 / 16Feb2020
 

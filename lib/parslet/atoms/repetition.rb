@@ -31,12 +31,18 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
   
   def try(source, context, consume_all)
     occ = 0
-    accum = [@tag]   # initialize the result array with the tag (for flattening)
+    accum = [@tag]
     start_pos = source.pos
-    
     break_on = nil
+
     loop do
-      success, value = parslet.apply(source, context, false)
+      begin
+        success, value = parslet.apply(source, context, false)
+      rescue Parslet::CutTaken => exception
+        raise if occ < min && exception.depth == context.choice_depth
+        break_on = exception.cause
+        break
+      end
 
       break_on = value
       break unless success
@@ -57,7 +63,12 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
       source, 
       error_msgs[:minrep],
       start_pos, 
-      [break_on]) if occ < min
+      [break_on]) if occ < min && context.committed_choice.nil?
+
+    if occ < min
+      depth = context.committed_depth
+      raise Parslet::CutTaken.new(depth, break_on)
+    end
       
     # consume_all is true, that means that we're inside the part of the parser
     # that should consume the input completely. Repetition failing here means
@@ -67,11 +78,13 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     # break_on would get thrown away. It turns out, that contains very
     # interesting information in a lot of cases. 
     #
-    return context.err(
-      self, 
-      source, 
-      error_msgs[:unconsumed], 
-      [break_on]) if consume_all && source.chars_left>0
+    if consume_all && source.chars_left>0
+      return context.err(
+        self,
+        source,
+        error_msgs[:unconsumed],
+        [break_on])
+    end
       
     return succ(accum)
   end
@@ -84,4 +97,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-

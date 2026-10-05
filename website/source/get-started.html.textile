@@ -206,6 +206,31 @@ like about neon yellow?
 
 h2. Making the parser complete
 
+h3. Committing to an alternative
+
+Ordered choices normally backtrack when a later part of a selected branch
+fails. Place a zero-width +cut+ (or +commit+) after a keyword once that
+keyword has uniquely identified the branch:
+
+<pre class="sh_ruby"><code>
+  rule(:increment) { str('inc') >> cut >> identifier }
+  rule(:decrement) { str('dec') >> cut >> identifier }
+  rule(:command)   { increment | decrement }
+</code></pre>
+
+For +inc!+, parslet now reports the failure while reading the identifier,
+instead of trying +decrement+ and reporting a misleading failure at the start
+of +command+. A cut is scoped to its nearest ordered choice. A cut inside
++keyword_choice+ does not prevent the outer +statement+ choice from trying
+another statement alternative:
+
+<pre class="sh_ruby"><code>
+  rule(:keyword_choice) { (str('go') >> cut >> str('x')) | str('stop') }
+  rule(:statement)     { keyword_choice | str('going') }
+</code></pre>
+
+Cuts remain scoped through repetition, lookahead, and cache hits.
+
 Let's look at the complete parser definition that also allows for function
 calls:
 

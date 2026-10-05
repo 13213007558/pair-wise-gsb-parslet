@@ -78,6 +78,12 @@ module Parslet::Atoms
       visitor.visit_re(match)
     end
   end
+
+  class Cut
+    def accept(visitor)
+      visitor.visit_cut
+    end
+  end
 end
 
 class Parslet::Parser

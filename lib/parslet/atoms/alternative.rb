@@ -34,17 +34,53 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
-    errors = alternatives.map { |a|
-      success, value = result = a.apply(source, context, consume_all)
-      return result if success
-      
-      # Aggregate all errors
-      value
-    }
+    choice = context.begin_choice
+    depth = context.choice_depth
+    errors = []
+
+    begin
+      alternatives.each { |alternative|
+        success, value = result =
+          alternative.apply(source, context, consume_all)
+        if success
+          return result
+        end
+
+        raise Parslet::CutTaken.new(depth, value) if choice.committed
+        errors << value
+      }
+    rescue Parslet::CutTaken => exception
+      raise unless exception.depth == depth
+      choice.committed = false
+      return [false, mark_cut(exception.cause)]
+    ensure
+      context.end_choice(choice)
+    end
     
     # If we reach this point, all alternatives have failed. 
+    if choice.committed
+      return [false, mark_cut(deepest_cause(errors))]
+    end
+    committed_errors = errors.compact.select { |error| error.respond_to?(:cut?) && error.cut? }
+    return [false, deepest_cause(committed_errors)] unless committed_errors.empty?
+
     context.err(self, source, error_msg, errors)
   end
+
+  def mark_cut(cause)
+    return cause if cause.nil?
+    cause.cut = true
+    cause
+  end
+  private :mark_cut
+
+  def deepest_cause(causes)
+    causes = Array(causes).flatten.compact
+    return nil if causes.empty?
+    deepest = causes.max_by(&:pos)
+    deepest.children.empty? ? deepest : deepest_cause(deepest.children)
+  end
+  private :deepest_cause
 
   precedence ALTERNATE
   def to_s_inner(prec)

@@ -18,6 +18,7 @@ module Parslet::Atoms
   require 'parslet/atoms/context'
   require 'parslet/atoms/dsl'
   require 'parslet/atoms/base'
+  require 'parslet/atoms/cut'
   require 'parslet/atoms/ignored'
   require 'parslet/atoms/named'
   require 'parslet/atoms/lookahead'
