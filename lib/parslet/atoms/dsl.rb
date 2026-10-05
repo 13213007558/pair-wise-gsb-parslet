@@ -35,6 +35,11 @@ module Parslet::Atoms::DSL
     Parslet::Atoms::Repetition.new(self, 0, 1, :maybe)
   end
 
+  # Matches self, then commits the nearest enclosing ordered choice.
+  def commit
+    Parslet::Atoms::Commit.new(self)
+  end
+
   # Returns a new parslet atom that will not show up in the output. This
   # is synonymous to calling #repeat(0,1). Generated tree value will always be 
   # nil.

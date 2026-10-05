@@ -39,7 +39,11 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
       success, value = parslet.apply(source, context, false)
 
       break_on = value
-      break unless success
+      unless success
+        return [false, break_on] if
+          context.committed_to_active_choice?(break_on)
+        break
+      end
 
       occ += 1
       accum << value
@@ -52,12 +56,15 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     
     # Greedy matcher has produced a failure. Check if occ (which will
     # contain the number of successes) is >= min.
-    return context.err_at(
-      self, 
-      source, 
-      error_msgs[:minrep],
-      start_pos, 
-      [break_on]) if occ < min
+    if occ < min
+      return [false, break_on] if context.committed?(break_on)
+      return context.err_at(
+        self,
+        source,
+        error_msgs[:minrep],
+        start_pos,
+        [break_on])
+    end
       
     # consume_all is true, that means that we're inside the part of the parser
     # that should consume the input completely. Repetition failing here means
@@ -67,11 +74,14 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     # break_on would get thrown away. It turns out, that contains very
     # interesting information in a lot of cases. 
     #
-    return context.err(
-      self, 
-      source, 
-      error_msgs[:unconsumed], 
-      [break_on]) if consume_all && source.chars_left>0
+    if consume_all && source.chars_left>0
+      return [false, break_on] if context.committed?(break_on)
+      return context.err(
+        self,
+        source,
+        error_msgs[:unconsumed],
+        [break_on])
+    end
       
     return succ(accum)
   end
@@ -84,4 +94,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-

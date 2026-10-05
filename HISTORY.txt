@@ -4,6 +4,10 @@
   We're in maintenance mode! The community is really stepping up here though, sending
   interesting additions our way. Here's what has been merged this far: 
 
+  + Scoped `cut`/`commit` atoms for ordered choices. A cut commits only to its
+    nearest enclosing alternative; nested repetition, lookahead and cache hits
+    preserve that scope and report failures at their real position.
+
   + Specification for mixing parslet parsers (Artur Komarov).
 
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).

@@ -34,16 +34,24 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   end
 
   def try(source, context, consume_all)
+    frame = context.begin_choice(self)
     errors = alternatives.map { |a|
       success, value = result = a.apply(source, context, consume_all)
-      return result if success
+      return result if success || frame.committed
       
       # Aggregate all errors
       value
     }
     
     # If we reach this point, all alternatives have failed. 
+    committed = errors.map { |error|
+      error.respond_to?(:deepest_committed) && error.deepest_committed
+    }.select { |error| error.respond_to?(:pos) }.max_by(&:pos)
+    return [false, committed] if committed
+
     context.err(self, source, error_msg, errors)
+  ensure
+    context.end_choice
   end
 
   precedence ALTERNATE

@@ -32,6 +32,7 @@ class Parslet::Atoms::Sequence < Parslet::Atoms::Base
       success, value = p.apply(source, context, child_consume_all) 
 
       unless success
+        return [false, value] if context.committed?(value)
         return context.err(self, source, error_msgs[:failed], [value])
       end
 

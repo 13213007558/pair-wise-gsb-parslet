@@ -51,6 +51,29 @@ SYNOPSIS
   # and then
   Smalltalk.new.parse('smalltalk')
 
+ORDERED CHOICE COMMITMENT
+
+  Ordered choices normally try every branch. When similar statements start
+  with the same keyword, this can hide the real syntax error behind another
+  branch's failure. A cut is a zero-width marker that commits to the nearest
+  enclosing choice; #commit is sugar for matching an atom and then cutting.
+
+  # A failure after 'set' points at the real failure position...
+  identifier   = match['a-z'].repeat(1)
+  set_statement = str('set').commit >> str(': ') >> identifier
+  let_statement = str('let') >> str(' = ') >> identifier
+
+  # ...but a cut inside an inner choice does not disable outer recovery.
+  inner_option = (cut >> str(': ') >> identifier) | str('other')
+  set_form     = str('set') >> inner_option >> str('end')
+  other_form   = str('set') >> str('other')
+  statement    = set_form | other_form
+
+  # 'setother' is recovered by the outer choice. A later failure in a committed
+  # inner branch is still reported at its own input position, not at the outer
+  # branch entry. Cuts remain scoped through repetition, lookahead and packrat
+  # cache hits.
+
 FEATURES
 
   * Tools for every part of the parser chain

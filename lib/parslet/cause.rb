@@ -7,6 +7,7 @@ module Parslet
     def initialize(message, source, pos, children)
       @message, @source, @pos, @children, @context =
         message, source, pos, children, nil
+      @committed_for = nil
     end
     
     # @return [String, Array] A string or an array of message pieces that 
@@ -21,6 +22,7 @@ module Parslet
     #
     # @return [Fixnum] Position where the error happened. (character offset)
     attr_reader :pos 
+    attr_reader :committed_for
     
     # When this cause is part of a tree of error causes: child nodes for this
     # node. Very often carries the reasons for this cause. 
@@ -43,6 +45,37 @@ module Parslet
     #
     def self.format(source, pos, str, children=[])
       self.new(str, source, pos, children)
+    end
+
+    # Marks this cause tree as belonging to an ordered-choice commitment.
+    def commit!(frame)
+      @committed_for = frame
+      children.each { |child| child.commit!(frame) }
+      self
+    end
+
+    def clear_commitment!
+      @committed_for = nil
+      children.each { |child| child.clear_commitment! }
+      self
+    end
+
+    # True when this tree contains a failure after an ordered-choice cut.
+    def committed?
+      !@committed_for.nil? || children.any? { |child| child.committed? }
+    end
+
+    def committed_for?(frame)
+      @committed_for.equal?(frame) ||
+        children.any? { |child| child.committed_for?(frame) }
+    end
+
+    # Returns the most advanced committed failure in this cause tree. This is
+    # returned directly by an outer choice so the real failure position wins.
+    def deepest_committed
+      candidates = children.map { |child| child.deepest_committed }.compact
+      candidates.push(self) if @committed_for
+      candidates.max_by { |cause| cause.pos }
     end
 
     # Update error message to include context provided by label

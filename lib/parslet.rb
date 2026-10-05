@@ -169,6 +169,12 @@ module Parslet
     Atoms::Re.new('.')
   end
   module_function :any
+
+  # Zero-width commitment to the nearest enclosing ordered choice.
+  def cut
+    Atoms::Cut.new
+  end
+  module_function :cut
   
   # Introduces a new capture scope. This means that all old captures stay
   # accessible, but new values stored will only be available during the block

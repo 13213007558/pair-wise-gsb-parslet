@@ -27,14 +27,23 @@ class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
     rewind_pos  = source.bytepos
     error_pos   = source.pos
 
-    success, _ = bound_parslet.apply(source, context, consume_all)
+    success, value = bound_parslet.apply(source, context, consume_all)
     
     if positive
       return succ(nil) if success
+      return [false, value] if context.committed?(value)
       return context.err_at(self, source, error_msgs[:positive], error_pos)
     else
-      return succ(nil) unless success
-      return context.err_at(self, source, error_msgs[:negative], error_pos)
+      if success
+        _, cause = context.err_at(
+          self, source, error_msgs[:negative], error_pos)
+        frame = context.committed_frame
+        return [false, cause.commit!(frame)] if frame && cause
+        return [false, cause]
+      end
+
+      return [false, value] if context.committed?(value)
+      return succ(nil)
     end
     
   # This is probably the only parslet that rewinds its input in #try.
