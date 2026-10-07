@@ -62,6 +62,24 @@ class Parslet::Atoms::Base
     
     return flatten(value)
   end
+
+  # Parses the atom as a context-free grammar while retaining ambiguity. The
+  # result is a shared packed parse forest; semantic output is built only when
+  # Parslet::CFG::Forest#value selects a tree.
+  def parse_cfg(io, options={})
+    source = io.respond_to?(:line_and_column) ? io : Parslet::Source.new(io)
+    string = source.instance_variable_get(:@str).string
+    compiler = Parslet::CFG::Compiler.new
+    root_symbol = compiler.compile(self, string.length)
+    consume_all = !options[:prefix]
+    forest = Parslet::CFG::Earley.new(compiler, string, source).parse(root_symbol, consume_all)
+
+    unless forest.success?
+      raise Parslet::ParseFailed, "CFG parse failed at #{source.pos.charpos}"
+    end
+
+    forest
+  end
   
   # Creates a context for parsing and applies the current atom to the input. 
   # Returns the parse result. 

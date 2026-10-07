@@ -7,7 +7,7 @@
 #   str('a').maybe        # matches 'a' if it is present in the input (repeat(0,1))
 #
 class Parslet::Atoms::Repetition < Parslet::Atoms::Base  
-  attr_reader :min, :max, :parslet
+  attr_reader :min, :max, :parslet, :tag
   def initialize(parslet, min, max, tag=:repetition)
     super()
 
@@ -84,4 +84,3 @@ class Parslet::Atoms::Repetition < Parslet::Atoms::Base
     parslet.to_s(prec) + minmax
   end
 end
-
