@@ -58,6 +58,7 @@ FEATURES
   * Accelerators transform parsers, making them quite a bit faster
   * Pluggable error reporters
   * Graphviz export for your parser
+  * Ordered tree edit distance with replayable insert/delete/replace scripts
   * Rspec testing support rig
   * Simply Ruby, composable and hackable
 
