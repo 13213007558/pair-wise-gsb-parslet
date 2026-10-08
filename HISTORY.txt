@@ -8,6 +8,11 @@
 
   + Update to Github Actions CI/CD. I guess newer is better? (Matt Larraz).
     Also includes testing on newer Ruby versions. 
+ 
+  + Parslet::TreeDiff: exact ordered-tree edit distance and a replayable
+    insert/delete/replace script for comparing two parse trees, with
+    caller supplied node costs and optional move detection as
+    post-processing. 
 
 
 = 2.0 / 16Feb2020
